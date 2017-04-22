@@ -3367,6 +3367,8 @@ class DAG(BaseDag, LoggingMixin):
             executor = LocalExecutor()
         elif not executor:
             executor = DEFAULT_EXECUTOR
+        else:
+            logging.info('Running %s on overridden executor %s', self.dag_id, executor.__class__)
         job = BackfillJob(
             self,
             start_date=start_date,

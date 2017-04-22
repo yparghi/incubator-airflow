@@ -1199,7 +1199,7 @@ class CLIFactory(object):
             "Run the task using the LocalExecutor", "store_true"),
         'executor': Arg(
             ("-ex", "--executor"),
-            "Run the task using a specific exeutor"),
+            "Run the task using a specific executor"),
         'donot_pickle': Arg(
             ("-x", "--donot_pickle"), (
                 "Do not attempt to pickle the DAG object to send over "
