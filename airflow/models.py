@@ -799,7 +799,8 @@ class TaskInstance(Base):
             raw=False,
             job_id=None,
             pool=None,
-            cfg_path=None):
+            cfg_path=None,
+            dag_executor=None):
         """
         Returns a command that can be executed anywhere where airflow is
         installed. This command is part of the message sent to executors by
@@ -816,7 +817,8 @@ class TaskInstance(Base):
             raw=raw,
             job_id=job_id,
             pool=pool,
-            cfg_path=cfg_path))
+            cfg_path=cfg_path,
+            dag_executor=dag_executor))
 
     def command_as_list(
             self,
@@ -830,7 +832,8 @@ class TaskInstance(Base):
             raw=False,
             job_id=None,
             pool=None,
-            cfg_path=None):
+            cfg_path=None,
+            dag_executor=None):
         """
         Returns a command that can be executed anywhere where airflow is
         installed. This command is part of the message sent to executors by
@@ -861,7 +864,8 @@ class TaskInstance(Base):
             raw=raw,
             job_id=job_id,
             pool=pool,
-            cfg_path=cfg_path)
+            cfg_path=cfg_path,
+            dag_executor=dag_executor)
 
     @staticmethod
     def generate_command(dag_id,
@@ -878,7 +882,8 @@ class TaskInstance(Base):
                          raw=False,
                          job_id=None,
                          pool=None,
-                         cfg_path=None
+                         cfg_path=None,
+                         dag_executor=None
                          ):
         """
         Generates the shell command required to execute this task instance.
@@ -928,6 +933,7 @@ class TaskInstance(Base):
         cmd.extend(["--raw"]) if raw else None
         cmd.extend(["-sd", file_path]) if file_path else None
         cmd.extend(["--cfg_path", cfg_path]) if cfg_path else None
+        cmd.extend(["--executor", dag_executor]) if dag_executor else None
         return cmd
 
     @property
@@ -3355,6 +3361,7 @@ class DAG(BaseDag, LoggingMixin):
             include_adhoc=False,
             local=False,
             executor=None,
+            dag_executor=None,
             donot_pickle=configuration.getboolean('core', 'donot_pickle'),
             ignore_task_deps=False,
             ignore_first_depends_on_past=False,
@@ -3367,8 +3374,7 @@ class DAG(BaseDag, LoggingMixin):
             executor = LocalExecutor()
         elif not executor:
             executor = DEFAULT_EXECUTOR
-        else:
-            logging.info('Running %s on overridden executor %s', self.dag_id, executor.__class__)
+
         job = BackfillJob(
             self,
             start_date=start_date,
@@ -3376,6 +3382,7 @@ class DAG(BaseDag, LoggingMixin):
             mark_success=mark_success,
             include_adhoc=include_adhoc,
             executor=executor,
+            dag_executor=dag_executor,
             donot_pickle=donot_pickle,
             ignore_task_deps=ignore_task_deps,
             ignore_first_depends_on_past=ignore_first_depends_on_past,

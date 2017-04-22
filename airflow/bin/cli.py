@@ -160,7 +160,7 @@ def backfill(args, dag=None):
             mark_success=args.mark_success,
             include_adhoc=args.include_adhoc,
             local=args.local,
-            executor=resolve_executor(args.executor),
+            dag_executor=args.executor,
             donot_pickle=(args.donot_pickle or
                           conf.getboolean('core', 'donot_pickle')),
             ignore_first_depends_on_past=args.ignore_first_depends_on_past,
@@ -451,7 +451,8 @@ def run(args, dag=None):
             ignore_depends_on_past=args.ignore_depends_on_past,
             ignore_task_deps=args.ignore_dependencies,
             ignore_ti_state=args.force,
-            pool=args.pool)
+            pool=args.pool,
+            dag_executor=args.executor)
         executor.heartbeat()
         executor.end()
 
@@ -1189,6 +1190,9 @@ class CLIFactory(object):
             ("--stdout", ), "Redirect stdout to this file"),
         'log_file': Arg(
             ("-l", "--log-file"), "Location of the log file"),
+        'executor': Arg(
+            ("-ex", "--executor"),
+            "Run the task using a specific executor"),
 
         # backfill
         'mark_success': Arg(
@@ -1197,9 +1201,6 @@ class CLIFactory(object):
         'local': Arg(
             ("-l", "--local"),
             "Run the task using the LocalExecutor", "store_true"),
-        'executor': Arg(
-            ("-ex", "--executor"),
-            "Run the task using a specific executor"),
         'donot_pickle': Arg(
             ("-x", "--donot_pickle"), (
                 "Do not attempt to pickle the DAG object to send over "
@@ -1525,7 +1526,7 @@ class CLIFactory(object):
             'args': (
                 'dag_id', 'task_id', 'execution_date', 'subdir',
                 'mark_success', 'force', 'pool', 'cfg_path',
-                'local', 'raw', 'ignore_all_dependencies', 'ignore_dependencies',
+                'local', 'executor', 'raw', 'ignore_all_dependencies', 'ignore_dependencies',
                 'ignore_depends_on_past', 'ship_dag', 'pickle', 'job_id'),
         }, {
             'func': initdb,
