@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 now = datetime.now()
 now_to_the_hour = (now - timedelta(0, 0, 0, 0, 0, 3)).replace(minute=0, second=0, microsecond=0)
-START_DATE = now_to_the_hour 
+START_DATE = now_to_the_hour
 DAG_NAME = 'test_dag_v1'
 
 default_args = {

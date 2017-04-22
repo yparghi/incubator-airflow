@@ -17,6 +17,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import traceback
 from datetime import datetime
 from functools import wraps
 import logging
@@ -39,10 +40,18 @@ def provide_session(func):
         needs_session = False
         arg_session = 'session'
         func_params = func.__code__.co_varnames
+
         session_in_args = arg_session in func_params and \
-            func_params.index(arg_session) < len(args)
-        if not (arg_session in kwargs or session_in_args):
+            func_params.index(arg_session) < len(args) and \
+            args[func_params.index(arg_session)] is not None
+
+        session_in_kwargs = arg_session in kwargs and \
+            kwargs[arg_session] is not None
+
+        if not (session_in_kwargs or session_in_args):
             needs_session = True
+            logging.info("Injecting session into %s" % func.__name__)
+            # traceback.print_stack()
             session = settings.Session()
             kwargs[arg_session] = session
         result = func(*args, **kwargs)

@@ -1546,7 +1546,7 @@ class SchedulerJob(BaseJob):
             models.DAG.sync_to_db(dag, dag.owner, sync_time)
 
         paused_dag_ids = [dag.dag_id for dag in dagbag.dags.values()
-                          if dag.is_paused]
+                          if dag.check_paused(session=session)]
 
         # Pickle the DAGs (if necessary) and put them into a SimpleDag
         for dag_id in dagbag.dags:
@@ -1665,7 +1665,7 @@ class BackfillJob(BaseJob):
         self.pool = pool
         super(BackfillJob, self).__init__(*args, **kwargs)
 
-    def _update_counters(self, started, succeeded, skipped, failed, tasks_to_run):
+    def _update_counters(self, started, succeeded, skipped, failed, tasks_to_run, session=None):
         """
         Updates the counters per state of the tasks that were running
         :param started:
@@ -1675,7 +1675,7 @@ class BackfillJob(BaseJob):
         :param tasks_to_run:
         """
         for key, ti in list(started.items()):
-            ti.refresh_from_db()
+            ti.refresh_from_db(session=session)
             if ti.state == State.SUCCESS:
                 succeeded.add(key)
                 self.logger.debug("Task instance {} succeeded. "
@@ -1700,7 +1700,7 @@ class BackfillJob(BaseJob):
                 started.pop(key)
                 tasks_to_run[key] = ti
 
-    def _manage_executor_state(self, started):
+    def _manage_executor_state(self, started, session=None):
         """
         Checks if the executor agrees with the state of task instances
         that are running
@@ -1715,7 +1715,7 @@ class BackfillJob(BaseJob):
                 continue
 
             ti = started[key]
-            ti.refresh_from_db()
+            ti.refresh_from_db(session=session)
 
             self.logger.debug("Executor state: {} task {}".format(state, ti))
 
@@ -1815,11 +1815,15 @@ class BackfillJob(BaseJob):
             self.reset_state_for_orphaned_tasks(dag_run=run, session=session)
 
             # for some reason if we dont refresh the reference to run is lost
-            run.refresh_from_db()
+            run.refresh_from_db(session=session)
             make_transient(run)
             active_dag_runs.append(run)
 
-            for ti in run.get_task_instances():
+            task_instances = run.get_task_instances(session=session)
+            for ti in task_instances:
+                session.expunge(ti)
+
+            for ti in task_instances:
                 # all tasks part of the backfill are scheduled to run
                 ti.set_state(State.SCHEDULED, session=session)
                 tasks_to_run[ti.key] = ti
@@ -1843,7 +1847,7 @@ class BackfillJob(BaseJob):
                     if task.task_id != ti.task_id:
                         continue
 
-                    ti.refresh_from_db()
+                    ti.refresh_from_db(session=session)
 
                     task = self.dag.get_task(ti.task_id)
                     ti.task = task
@@ -1939,7 +1943,7 @@ class BackfillJob(BaseJob):
 
             # execute the tasks in the queue
             self.heartbeat()
-            executor.heartbeat()
+            executor.heartbeat(session=session)
 
             # If the set of tasks that aren't ready ever equals the set of
             # tasks to run and there are no running tasks then the backfill
@@ -1951,12 +1955,12 @@ class BackfillJob(BaseJob):
                 tasks_to_run.clear()
 
             # check executor state
-            self._manage_executor_state(started)
+            self._manage_executor_state(started, session=session)
 
             # update the task counters
             self._update_counters(started=started, succeeded=succeeded,
                                   skipped=skipped, failed=failed,
-                                  tasks_to_run=tasks_to_run)
+                                  tasks_to_run=tasks_to_run, session=session)
 
             # update dag run state
             _dag_runs = active_dag_runs[:]
@@ -1966,7 +1970,7 @@ class BackfillJob(BaseJob):
                     finished_runs += 1
                     active_dag_runs.remove(run)
 
-                if run.dag.is_paused:
+                if run.dag.check_paused(session=session):
                     models.DagStat.clean_dirty([run.dag_id], session=session)
 
             msg = ' | '.join([

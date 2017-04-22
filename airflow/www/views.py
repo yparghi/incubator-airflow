@@ -1839,7 +1839,7 @@ class HomeView(AdminIndexView):
 
         # optionally filter out "paused" dags
         if hide_paused:
-            orm_dags = {dag.dag_id: dag for dag in qry_fltr if not dag.is_paused}
+            orm_dags = {dag.dag_id: dag for dag in qry_fltr if not dag.check_paused(session=session)}
 
         else:
             orm_dags = {dag.dag_id: dag for dag in qry_fltr}
@@ -1857,7 +1857,7 @@ class HomeView(AdminIndexView):
         # optionally filter out "paused" dags
         if hide_paused:
             unfiltered_webserver_dags = [dag for dag in dagbag.dags.values() if
-                                         not dag.parent_dag and not dag.is_paused]
+                                         not dag.parent_dag and not dag.check_paused(session=session)]
 
         else:
             unfiltered_webserver_dags = [dag for dag in dagbag.dags.values() if

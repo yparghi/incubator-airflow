@@ -623,7 +623,7 @@ class Connection(Base):
                 fernet = get_fernet()
                 self._extra = fernet.encrypt(bytes(value, 'utf-8')).decode()
                 self.is_extra_encrypted = True
-            except NameError:
+            except:
                 self._extra = value
                 self.is_extra_encrypted = False
 
@@ -2923,7 +2923,6 @@ class DAG(BaseDag, LoggingMixin):
     def owner(self):
         return ", ".join(list(set([t.owner for t in self.tasks])))
 
-    @property
     @provide_session
     def concurrency_reached(self, session=None):
         """
@@ -2941,6 +2940,9 @@ class DAG(BaseDag, LoggingMixin):
     @property
     @provide_session
     def is_paused(self, session=None):
+        return self.check_paused(session=session)
+
+    def check_paused(self, session=None):
         """
         Returns a boolean indicating whether this DAG is paused
         """

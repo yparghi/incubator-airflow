@@ -92,7 +92,7 @@ class BaseExecutor(LoggingMixin):
         """
         pass
 
-    def heartbeat(self):
+    def heartbeat(self, session=None):
 
         # Triggering new jobs
         if not self.parallelism:
@@ -118,7 +118,7 @@ class BaseExecutor(LoggingMixin):
             # Backfill. This fix reduces the probability of a collision but
             # does NOT eliminate it.
             self.queued_tasks.pop(key)
-            ti.refresh_from_db()
+            ti.refresh_from_db(session=session)
             if ti.state != State.RUNNING:
                 self.running[key] = command
                 self.execute_async(key, command=command, queue=queue)
