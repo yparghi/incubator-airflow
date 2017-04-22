@@ -45,7 +45,7 @@ from airflow import api
 from airflow import jobs, settings
 from airflow import configuration as conf
 from airflow.exceptions import AirflowException
-from airflow.executors import DEFAULT_EXECUTOR
+from airflow.executors import DEFAULT_EXECUTOR, resolve_executor
 from airflow.models import (DagModel, DagBag, TaskInstance,
                             DagPickle, DagRun, Variable, DagStat,
                             Pool, Connection)
@@ -160,6 +160,7 @@ def backfill(args, dag=None):
             mark_success=args.mark_success,
             include_adhoc=args.include_adhoc,
             local=args.local,
+            executor=resolve_executor(args.executor),
             donot_pickle=(args.donot_pickle or
                           conf.getboolean('core', 'donot_pickle')),
             ignore_first_depends_on_past=args.ignore_first_depends_on_past,
@@ -1196,6 +1197,9 @@ class CLIFactory(object):
         'local': Arg(
             ("-l", "--local"),
             "Run the task using the LocalExecutor", "store_true"),
+        'executor': Arg(
+            ("-ex", "--executor"),
+            "Run the task using a specific exeutor"),
         'donot_pickle': Arg(
             ("-x", "--donot_pickle"), (
                 "Do not attempt to pickle the DAG object to send over "
@@ -1472,7 +1476,7 @@ class CLIFactory(object):
             'help': "Run subsections of a DAG for a specified date range",
             'args': (
                 'dag_id', 'task_regex', 'start_date', 'end_date',
-                'mark_success', 'local', 'donot_pickle', 'include_adhoc',
+                'mark_success', 'local', 'executor', 'donot_pickle', 'include_adhoc',
                 'bf_ignore_dependencies', 'bf_ignore_first_depends_on_past',
                 'subdir', 'pool', 'dry_run')
         }, {

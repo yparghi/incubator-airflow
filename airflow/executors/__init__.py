@@ -30,27 +30,34 @@ def _integrate_plugins():
         sys.modules[executors_module.__name__] = executors_module
         globals()[executors_module._name] = executors_module
 
+
+def resolve_executor(name):
+    if not name:
+        return None
+
+    if name == 'LocalExecutor':
+        return LocalExecutor()
+    elif name == 'SequentialExecutor':
+        return SequentialExecutor()
+    elif name == 'CeleryExecutor':
+        from airflow.executors.celery_executor import CeleryExecutor
+        return CeleryExecutor()
+    elif name == 'DaskExecutor':
+        from airflow.executors.dask_executor import DaskExecutor
+        return DaskExecutor()
+    elif name == 'MesosExecutor':
+        from airflow.contrib.executors.mesos_executor import MesosExecutor
+        return MesosExecutor()
+    else:
+        # Loading plugins
+        _integrate_plugins()
+        if name in globals():
+            return globals()[_EXECUTOR]()
+        else:
+            raise AirflowException("Executor {0} not supported.".format(_EXECUTOR))
+
 _EXECUTOR = configuration.get('core', 'EXECUTOR')
 
-if _EXECUTOR == 'LocalExecutor':
-    DEFAULT_EXECUTOR = LocalExecutor()
-elif _EXECUTOR == 'SequentialExecutor':
-    DEFAULT_EXECUTOR = SequentialExecutor()
-elif _EXECUTOR == 'CeleryExecutor':
-    from airflow.executors.celery_executor import CeleryExecutor
-    DEFAULT_EXECUTOR = CeleryExecutor()
-elif _EXECUTOR == 'DaskExecutor':
-    from airflow.executors.dask_executor import DaskExecutor
-    DEFAULT_EXECUTOR = DaskExecutor()
-elif _EXECUTOR == 'MesosExecutor':
-    from airflow.contrib.executors.mesos_executor import MesosExecutor
-    DEFAULT_EXECUTOR = MesosExecutor()
-else:
-    # Loading plugins
-    _integrate_plugins()
-    if _EXECUTOR in globals():
-        DEFAULT_EXECUTOR = globals()[_EXECUTOR]()
-    else:
-        raise AirflowException("Executor {0} not supported.".format(_EXECUTOR))
+DEFAULT_EXECUTOR = resolve_executor(_EXECUTOR)
 
 logging.info("Using executor " + _EXECUTOR)
