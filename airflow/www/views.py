@@ -1839,7 +1839,7 @@ class HomeView(AdminIndexView):
 
         # optionally filter out "paused" dags
         if hide_paused:
-            orm_dags = {dag.dag_id: dag for dag in qry_fltr if not dag.check_paused(session=session)}
+            orm_dags = {dag.dag_id: dag for dag in qry_fltr if not dag.is_paused}
 
         else:
             orm_dags = {dag.dag_id: dag for dag in qry_fltr}
