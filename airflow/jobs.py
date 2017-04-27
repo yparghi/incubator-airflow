@@ -1176,7 +1176,7 @@ class SchedulerJob(BaseJob):
             self._process_task_instances(dag, tis_out)
             self.manage_slas(dag)
 
-        models.DagStat.clean_dirty([d.dag_id for d in dags])
+        models.DagStat.update([d.dag_id for d in dags])
 
     def _process_executor_events(self):
         """
@@ -1358,7 +1358,8 @@ class SchedulerJob(BaseJob):
         active_runs = DagRun.find(
             state=State.RUNNING,
             external_trigger=False,
-            session=session
+            session=session,
+            no_backfills=True,
         )
         for dr in active_runs:
             self.logger.info("Resetting {} {}".format(dr.dag_id,
@@ -1861,6 +1862,13 @@ class BackfillJob(BaseJob):
                     self.logger.debug("Task instance to run {} state {}"
                                       .format(ti, ti.state))
 
+                    # guard against externally modified tasks instances or
+                    # in case max concurrency has been reached at task runtime
+                    if ti.state == State.NONE:
+                        self.logger.warning("FIXME: task instance {} state was set to "
+                                            "None externally. This should not happen")
+                        ti.set_state(State.SCHEDULED, session=session)
+
                     # The task was already marked successful or skipped by a
                     # different Job. Don't rerun it.
                     if ti.state == State.SUCCESS:
@@ -1975,7 +1983,7 @@ class BackfillJob(BaseJob):
                     active_dag_runs.remove(run)
 
                 if run.dag.check_paused(session=session):
-                    models.DagStat.clean_dirty([run.dag_id], session=session)
+                    models.DagStat.update([run.dag_id], session=session)
 
             msg = ' | '.join([
                 "[backfill progress]",
