@@ -2160,6 +2160,9 @@ class BackfillJob(BaseJob):
             self.log.debug("*** Clearing out not_ready list ***")
             ti_status.not_ready.clear()
 
+            # Get the pool settings
+            pools = {p.pool: p for p in session.query(models.Pool).all()}
+
             # we need to execute the tasks bottom to top
             # or leaf to root, as otherwise tasks might be
             # determined deadlocked while they are actually
@@ -2170,6 +2173,18 @@ class BackfillJob(BaseJob):
                         continue
 
                     ti.refresh_from_db()
+
+                    pool = ti.pool
+                    if not pool:
+                        # Arbitrary:
+                        # If queued outside of a pool, trigger no more than
+                        # non_pooled_task_slot_count per run
+                        open_slots = conf.getint('core', 'non_pooled_task_slot_count')
+                    else:
+                        open_slots = pools[pool].open_slots(session=session)
+
+                    if open_slots <= 0:
+                        logging.info("Pool full! Not scheduling task in pool %s".format(pool))
 
                     task = self.dag.get_task(ti.task_id)
                     ti.task = task
