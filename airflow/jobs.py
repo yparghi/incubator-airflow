@@ -1866,7 +1866,8 @@ class BackfillJob(BaseJob):
                         open_slots = pools[pool].open_slots(session=session)
 
                     if open_slots <= 0:
-                        logging.info("Pool full! Not scheduling task in pool %s".format(pool))
+                        logging.info("Pool full! Not scheduling task in pool %s", pool)
+                        continue
 
                     task = self.dag.get_task(ti.task_id)
                     ti.task = task
