@@ -1054,8 +1054,8 @@ class SchedulerJob(BaseJob):
 
                 # todo: remove this logic when backfills will be part of the scheduler
                 dag_run = task_instance.get_dagrun()
-                if dag_run and dag_run.is_backfill:
-                    continue
+                # if dag_run and dag_run.is_backfill:
+                #     continue
 
                 # Check to make sure that the task concurrency of the DAG hasn't been
                 # reached.
