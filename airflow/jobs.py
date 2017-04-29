@@ -2184,7 +2184,7 @@ class BackfillJob(BaseJob):
                         open_slots = pools[pool].open_slots(session=session)
 
                     if open_slots <= 0:
-                        logging.info("Pool full! Not scheduling task in pool %s", pool)
+                        # logging.info("Pool full! Not scheduling task in pool %s", pool)
                         continue
 
                     task = self.dag.get_task(ti.task_id)
@@ -2247,7 +2247,10 @@ class BackfillJob(BaseJob):
                             session=session,
                             verbose=True):
                         ti.refresh_from_db(lock_for_update=True, session=session)
-                        if ti.state == State.SCHEDULED or ti.state == State.UP_FOR_RETRY:
+                        if ti.state == State.SCHEDULED \
+                            or ti.state == State.UP_FOR_RETRY \
+                            or ti.state == State.QUEUED:
+
                             if executor.has_task(ti):
                                 self.log.debug(
                                     "Task Instance %s already in executor waiting for queue to clear",
