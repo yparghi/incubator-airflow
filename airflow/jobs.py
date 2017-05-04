@@ -1845,6 +1845,9 @@ class BackfillJob(BaseJob):
             # Get the pool settings
             pools = {p.pool: p for p in session.query(models.Pool).all()}
 
+            for p in pools.values():
+                session.expunge(p)
+
             # we need to execute the tasks bottom to top
             # or leaf to root, as otherwise tasks might be
             # determined deadlocked while they are actually
