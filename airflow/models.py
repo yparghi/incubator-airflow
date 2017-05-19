@@ -1532,7 +1532,10 @@ class TaskInstance(Base):
         tomorrow_ds = (self.execution_date + timedelta(1)).isoformat()[:10]
 
         prev_execution_date = task.dag.previous_schedule(self.execution_date)
+        prev_ds = prev_execution_date.isoformat()[:10]
+
         next_execution_date = task.dag.following_schedule(self.execution_date)
+        next_ds = next_execution_date.isoformat()[:10]
 
         ds_nodash = ds.replace('-', '')
         ts_nodash = ts.replace('-', '').replace(':', '')
@@ -1604,7 +1607,9 @@ class TaskInstance(Base):
             'run_id': run_id,
             'execution_date': self.execution_date,
             'prev_execution_date': prev_execution_date,
+            'prev_ds': prev_ds,
             'next_execution_date': next_execution_date,
+            'next_ds': next_ds,
             'latest_date': ds,
             'macros': macros,
             'params': params,
@@ -3890,7 +3895,7 @@ class DagStat(Base):
         """
         :param dag_id: the dag_id to mark dirty
         :param session: database session
-        :return: 
+        :return:
         """
         DagStat.create(dag_id=dag_id, session=session)
 
@@ -3967,11 +3972,11 @@ class DagStat(Base):
     @provide_session
     def create(dag_id, session=None):
         """
-        Creates the missing states the stats table for the dag specified 
-        
+        Creates the missing states the stats table for the dag specified
+
         :param dag_id: dag id of the dag to create stats for
         :param session: database session
-        :return: 
+        :return:
         """
         # unfortunately sqlalchemy does not know upsert
         qry = session.query(DagStat).filter(DagStat.dag_id == dag_id).all()
@@ -4081,7 +4086,7 @@ class DagRun(Base):
         :type state: State
         :param external_trigger: whether this dag run is externally triggered
         :type external_trigger: bool
-        :param no_backfills: return no backfills (True), return all (False). 
+        :param no_backfills: return no backfills (True), return all (False).
         Defaults to False
         :type no_backfills: bool
         :param session: database session
