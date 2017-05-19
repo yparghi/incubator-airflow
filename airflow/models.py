@@ -1657,7 +1657,10 @@ class TaskInstance(Base, LoggingMixin):
         tomorrow_ds = (self.execution_date + timedelta(1)).isoformat()[:10]
 
         prev_execution_date = task.dag.previous_schedule(self.execution_date)
+        prev_ds = prev_execution_date.isoformat()[:10]
+
         next_execution_date = task.dag.following_schedule(self.execution_date)
+        next_ds = next_execution_date.isoformat()[:10]
 
         ds_nodash = ds.replace('-', '')
         ts_nodash = ts.replace('-', '').replace(':', '')
@@ -1729,7 +1732,9 @@ class TaskInstance(Base, LoggingMixin):
             'run_id': run_id,
             'execution_date': self.execution_date,
             'prev_execution_date': prev_execution_date,
+            'prev_ds': prev_ds,
             'next_execution_date': next_execution_date,
+            'next_ds': next_ds,
             'latest_date': ds,
             'macros': macros,
             'params': params,
