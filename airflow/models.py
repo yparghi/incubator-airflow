@@ -1662,7 +1662,7 @@ class TaskInstance(Base, LoggingMixin):
         next_execution_date = task.dag.following_schedule(self.execution_date)
         next_ds = next_execution_date.isoformat()[:10]
         month_first_ds = self.execution_date.replace(day=1)
-        month_last_ds = self.execution_date.replace(day=calendar.monthrange(date.year, date.month)[1])
+        month_last_ds = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
 
         ds_nodash = ds.replace('-', '')
         ts_nodash = ts.replace('-', '').replace(':', '')
