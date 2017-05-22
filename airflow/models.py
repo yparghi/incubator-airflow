@@ -17,6 +17,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import calendar
+
 from future.standard_library import install_aliases
 
 install_aliases()
@@ -24,7 +26,7 @@ from builtins import str
 from builtins import object, bytes
 import copy
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import dill
 import functools
 import getpass
@@ -1655,17 +1657,21 @@ class TaskInstance(Base, LoggingMixin):
         ts = self.execution_date.isoformat()
         yesterday_ds = (self.execution_date - timedelta(1)).isoformat()[:10]
         tomorrow_ds = (self.execution_date + timedelta(1)).isoformat()[:10]
-
         prev_execution_date = task.dag.previous_schedule(self.execution_date)
         prev_ds = prev_execution_date.isoformat()[:10]
-
         next_execution_date = task.dag.following_schedule(self.execution_date)
         next_ds = next_execution_date.isoformat()[:10]
+        month_first_ds = self.execution_date.replace(day=1)
+        month_last_ds = self.execution_date.replace(day=calendar.calendar.monthrange(date.year, date.month)[1])
 
         ds_nodash = ds.replace('-', '')
         ts_nodash = ts.replace('-', '').replace(':', '')
         yesterday_ds_nodash = yesterday_ds.replace('-', '')
         tomorrow_ds_nodash = tomorrow_ds.replace('-', '')
+        prev_ds_nodash = prev_ds.replace('-', '')
+        next_ds_nodash = next_ds.replace('-', '')
+        month_first_ds_nodash = month_first_ds.replace('-', '')
+        month_last_ds_nodash = month_last_ds.replace('-', '')
 
         ti_key_str = "{task.dag_id}__{task.task_id}__{ds_nodash}"
         ti_key_str = ti_key_str.format(**locals())
@@ -1733,8 +1739,14 @@ class TaskInstance(Base, LoggingMixin):
             'execution_date': self.execution_date,
             'prev_execution_date': prev_execution_date,
             'prev_ds': prev_ds,
+            'prev_ds_nodash': prev_ds_nodash,
             'next_execution_date': next_execution_date,
             'next_ds': next_ds,
+            'next_ds_nodash': next_ds_nodash,
+            'month_first_ds': month_first_ds,
+            'month_first_ds_nodash': month_first_ds_nodash,
+            'month_last_ds': month_last_ds,
+            'month_last_ds_nodash': month_last_ds_nodash,
             'latest_date': ds,
             'macros': macros,
             'params': params,
