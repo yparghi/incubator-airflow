@@ -22,6 +22,7 @@ from airflow.executors.sequential_executor import SequentialExecutor
 
 from airflow.exceptions import AirflowException
 
+DEFAULT_EXECUTOR = None
 
 def _integrate_plugins():
     """Integrate plugins to the context."""
@@ -30,34 +31,50 @@ def _integrate_plugins():
         sys.modules[executors_module.__name__] = executors_module
         globals()[executors_module._name] = executors_module
 
+def GetDefaultExecutor():
+    """Creates a new instance of the configured executor if none exists and returns it"""
+    global DEFAULT_EXECUTOR
 
-def resolve_executor(name):
-    if not name:
-        return None
+    if DEFAULT_EXECUTOR is not None:
+        return DEFAULT_EXECUTOR
 
-    if name == 'LocalExecutor':
+    executor_name = configuration.get('core', 'EXECUTOR')
+
+    DEFAULT_EXECUTOR = _get_executor(executor_name)
+
+    logging.info("Using executor " + executor_name)
+
+    return DEFAULT_EXECUTOR
+
+
+def _get_executor(executor_name):
+    """
+    Creates a new instance of the named executor. In case the executor name is not know in airflow,
+    look for it in the plugins
+    """
+    if executor_name == 'LocalExecutor':
         return LocalExecutor()
-    elif name == 'SequentialExecutor':
+    elif executor_name == 'SequentialExecutor':
         return SequentialExecutor()
-    elif name == 'CeleryExecutor':
+    elif executor_name == 'CeleryExecutor':
         from airflow.executors.celery_executor import CeleryExecutor
         return CeleryExecutor()
-    elif name == 'DaskExecutor':
+    elif executor_name == 'DaskExecutor':
         from airflow.executors.dask_executor import DaskExecutor
         return DaskExecutor()
-    elif name == 'MesosExecutor':
+    elif executor_name == 'MesosExecutor':
         from airflow.contrib.executors.mesos_executor import MesosExecutor
         return MesosExecutor()
     else:
         # Loading plugins
         _integrate_plugins()
-        if name in globals():
-            return globals()[_EXECUTOR]()
+        executor_path = executor_name.split('.')
+        if len(executor_path) != 2:
+            raise AirflowException(
+                "Executor {0} not supported: please specify in format plugin_module.executor".format(executor_name))
+
+        if executor_path[0] in globals():
+            return globals()[executor_path[0]].__dict__[executor_path[1]]()
         else:
-            raise AirflowException("Executor {0} not supported.".format(_EXECUTOR))
+            raise AirflowException("Executor {0} not supported.".format(executor_name))
 
-_EXECUTOR = configuration.get('core', 'EXECUTOR')
-
-DEFAULT_EXECUTOR = resolve_executor(_EXECUTOR)
-
-logging.info("Using executor " + _EXECUTOR)

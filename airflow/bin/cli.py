@@ -14,38 +14,38 @@
 # limitations under the License.
 
 from __future__ import print_function
-import logging
-
-import reprlib
-
-import os
-import subprocess
-import textwrap
-import warnings
-from importlib import import_module
 
 import argparse
+import json
+import logging
+import os
+import reprlib
+import signal
+import subprocess
+import sys
+import textwrap
+import threading
+import time
+import traceback
+import warnings
 from builtins import input
 from collections import namedtuple
-from dateutil.parser import parse as parsedate
-import json
-from tabulate import tabulate
+from importlib import import_module
 
 import daemon
-from daemon.pidfile import TimeoutPIDLockFile
-import signal
-import sys
-import threading
-import traceback
-import time
 import psutil
+from daemon.pidfile import TimeoutPIDLockFile
+from dateutil.parser import parse as parsedate
+from sqlalchemy import func
+from sqlalchemy.orm import exc
+from tabulate import tabulate
 
 import airflow
 from airflow import api
-from airflow import jobs, settings
 from airflow import configuration as conf
+from airflow import jobs, settings
 from airflow.exceptions import AirflowException
-from airflow.executors import DEFAULT_EXECUTOR, resolve_executor
+from airflow.executors import GetDefaultExecutor
 from airflow.models import (DagModel, DagBag, TaskInstance,
                             DagPickle, DagRun, Variable, DagStat,
                             Pool, Connection)
@@ -54,10 +54,6 @@ from airflow.utils import db as db_utils
 from airflow.utils import logging as logging_utils
 from airflow.utils.file import mkdirs
 from airflow.www.app import cached_app
-
-from sqlalchemy import func
-from sqlalchemy.orm import exc
-
 
 api.load_auth()
 api_module = import_module(conf.get('cli', 'api_client'))
@@ -440,7 +436,7 @@ def run(args, dag=None):
                 print(e)
                 raise e
 
-        executor = DEFAULT_EXECUTOR
+        executor = GetDefaultExecutor()
         executor.start()
         print("Sending to executor.")
         executor.queue_task_instance(
