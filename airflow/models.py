@@ -1536,8 +1536,10 @@ class TaskInstance(Base):
         prev_ds = prev_execution_date.isoformat()[:10]
         next_execution_date = task.dag.following_schedule(self.execution_date)
         next_ds = next_execution_date.isoformat()[:10]
-        month_first_ds = self.execution_date.replace(day=1)
-        month_last_ds = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
+        month_first_date = self.execution_date.replace(day=1)
+        month_first_ds = month_first_date.isoformat()[:10]
+        month_last_date = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
+        month_last_ds = month_last_date.isoformat()[:10]
 
         ds_nodash = ds.replace('-', '')
         ts_nodash = ts.replace('-', '').replace(':', '')
