@@ -1655,8 +1655,22 @@ class TaskInstance(Base):
         for attr in task.__class__.template_fields:
             content = getattr(task, attr)
             if content:
-                rendered_content = rt(attr, content, jinja_context)
-                setattr(task, attr, rendered_content)
+                last_content = content
+                done_rendering = False
+                iterations = 0
+                while not done_rendering:
+                    rendered_content = rt(attr, last_content, jinja_context)
+                    if iterations > 5:
+                        logging.info('Stuck in loop!!!!')
+                        break
+
+                    if last_content == rendered_content:
+                        done_rendering = True
+
+                    last_content = rendered_content
+                    iterations += 1
+
+                setattr(task, attr, last_content)
 
     def email_alert(self, exception, is_retry=False):
         task = self.task
