@@ -84,7 +84,7 @@ from airflow.utils.timeout import timeout
 from airflow.utils.trigger_rule import TriggerRule
 
 Base = declarative_base()
-ID_LEN = 250
+ID_LEN = 191
 XCOM_RETURN_KEY = 'return_value'
 
 Stats = settings.Stats
