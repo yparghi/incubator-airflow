@@ -26,7 +26,7 @@ from builtins import str
 from builtins import object, bytes
 import copy
 from collections import namedtuple
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 import dill
 import functools
 import getpass
@@ -4373,6 +4373,28 @@ class DagRun(Base):
                 cls.dag_id,
                 func.max(cls.execution_date).label('execution_date'))
             .filter(cls.state == State.RUNNING)
+            .group_by(cls.dag_id)
+            .subquery()
+        )
+        dagruns = (
+            session
+            .query(cls)
+            .join(subquery,
+                  and_(cls.dag_id == subquery.c.dag_id,
+                       cls.execution_date == subquery.c.execution_date))
+            .all()
+        )
+        return dagruns
+
+    @classmethod
+    @provide_session
+    def get_all_latest_runs(cls, session):
+        """Returns the latest running DagRun for each DAG. """
+        subquery = (
+            session
+            .query(
+                cls.dag_id,
+                func.max(cls.execution_date).label('execution_date'))
             .group_by(cls.dag_id)
             .subquery()
         )
