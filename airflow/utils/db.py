@@ -51,7 +51,7 @@ def provide_session(func):
 
         if not (session_in_kwargs or session_in_args):
             needs_session = True
-            log.info("Injecting session into %s" % func.__name__)
+            #logging.info("Injecting session into %s" % func.__name__)
             # traceback.print_stack()
             session = settings.Session()
             kwargs[arg_session] = session
