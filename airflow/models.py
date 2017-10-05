@@ -1536,9 +1536,9 @@ class TaskInstance(Base):
         yesterday_ds = (self.execution_date - timedelta(1)).isoformat()[:10]
         tomorrow_ds = (self.execution_date + timedelta(1)).isoformat()[:10]
         prev_execution_date = task.dag.previous_schedule(self.execution_date)
-        prev_ds = prev_execution_date.isoformat()[:10]
+        prev_ds = prev_execution_date.isoformat()[:10] if prev_execution_date else None
         next_execution_date = task.dag.following_schedule(self.execution_date)
-        next_ds = next_execution_date.isoformat()[:10]
+        next_ds = next_execution_date.isoformat()[:10] if next_execution_date else None
         month_first_date = self.execution_date.replace(day=1)
         month_first_ds = month_first_date.isoformat()[:10]
         month_last_date = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
@@ -1548,8 +1548,8 @@ class TaskInstance(Base):
         ts_nodash = ts.replace('-', '').replace(':', '')
         yesterday_ds_nodash = yesterday_ds.replace('-', '')
         tomorrow_ds_nodash = tomorrow_ds.replace('-', '')
-        prev_ds_nodash = prev_ds.replace('-', '')
-        next_ds_nodash = next_ds.replace('-', '')
+        prev_ds_nodash = prev_ds.replace('-', '') if prev_ds else None
+        next_ds_nodash = next_ds.replace('-', '') if next_ds else None
         month_first_ds_nodash = month_first_ds.replace('-', '')
         month_last_ds_nodash = month_last_ds.replace('-', '')
 
