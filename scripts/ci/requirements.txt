@@ -23,7 +23,7 @@ chartkick
 cloudant
 coverage
 coveralls
-croniter
+croniter>=0.3.17
 cryptography
 datadog
 dill
@@ -53,7 +53,7 @@ ldap3
 lxml
 markdown
 mock
-moto
+moto==1.1.19
 mysqlclient
 nose
 nose-exclude
@@ -63,9 +63,9 @@ oauth2client>=2.0.2,<2.1.0
 pandas
 pandas-gbq
 parameterized
+paramiko>=2.1.1
 psutil>=4.2.0, <5.0.0
 psycopg2
-pydruid
 pygments
 pyhive
 pykerberos
@@ -73,10 +73,12 @@ PyOpenSSL
 PySmbClient
 python-daemon
 python-dateutil
+qds-sdk>=1.9.6
 redis
 rednose
 requests
 requests-kerberos
+requests_mock
 setproctitle
 slackclient
 sphinx

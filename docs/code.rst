@@ -72,6 +72,7 @@ Operator API
         PrestoIntervalCheckOperator,
         PrestoValueCheckOperator,
         PythonOperator,
+        PythonVirtualenvOperator,
         S3KeySensor,
         S3ToHiveTransfer,
         ShortCircuitOperator,
@@ -91,7 +92,7 @@ Community-contributed Operators
 .. automodule:: airflow.contrib.operators
     :show-inheritance:
     :members:
-        SSHExecuteOperator,
+        SSHOperator,
         VerticaOperator,
         VerticaToHiveTransfer
 
@@ -145,13 +146,13 @@ Variable                            Description
                                     key within the JSON object
 ``{{ task_instance_key_str }}``     a unique, human-readable key to the task instance
                                     formatted ``{dag_id}_{task_id}_{ds}``
-``conf``                            the full configuration object located at
+``{{ conf }}``                      the full configuration object located at
                                     ``airflow.configuration.conf`` which
                                     represents the content of your
                                     ``airflow.cfg``
-``run_id``                          the ``run_id`` of the current DAG run
-``dag_run``                         a reference to the DagRun object
-``test_mode``                       whether the task instance was called using
+``{{ run_id }}``                    the ``run_id`` of the current DAG run
+``{{ dag_run }}``                   a reference to the DagRun object
+``{{ test_mode }}``                 whether the task instance was called using
                                     the CLI's test subcommand
 =================================   ====================================
 
@@ -215,6 +216,7 @@ Hooks
     :show-inheritance:
     :members:
         DbApiHook,
+        DockerHook,
         HiveCliHook,
         HiveMetastoreHook,
         HiveServer2Hook,

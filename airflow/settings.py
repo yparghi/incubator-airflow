@@ -19,17 +19,17 @@ from __future__ import unicode_literals
 
 import logging
 import os
-import sys
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from airflow import configuration as conf
+from airflow.logging_config import configure_logging
+
+log = logging.getLogger(__name__)
 
 
 class DummyStatsLogger(object):
-
     @classmethod
     def incr(cls, stat, count=1, rate=1):
         pass
@@ -46,10 +46,12 @@ class DummyStatsLogger(object):
     def timing(cls, stat, dt):
         pass
 
+
 Stats = DummyStatsLogger
 
 if conf.getboolean('scheduler', 'statsd_on'):
     from statsd import StatsClient
+
     statsd = StatsClient(
         host=conf.get('scheduler', 'statsd_host'),
         port=conf.getint('scheduler', 'statsd_port'),
@@ -57,7 +59,6 @@ if conf.getboolean('scheduler', 'statsd_on'):
     Stats = statsd
 else:
     Stats = DummyStatsLogger
-
 
 HEADER = """\
   ____________       _____________
@@ -73,14 +74,8 @@ LOGGING_LEVEL = logging.INFO
 # the prefix to append to gunicorn worker processes after init
 GUNICORN_WORKER_READY_PREFIX = "[ready] "
 
-# can't move this to conf due to ConfigParser interpolation
-LOG_FORMAT = (
-    '[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
-LOG_FORMAT_WITH_PID = (
-    '[%(asctime)s] [%(process)d] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
-LOG_FORMAT_WITH_THREAD_NAME = (
-    '[%(asctime)s] {%(filename)s:%(lineno)d} %(threadName)s %(levelname)s - %(message)s')
-SIMPLE_LOG_FORMAT = '%(asctime)s %(levelname)s - %(message)s'
+LOG_FORMAT = conf.get('core', 'log_format')
+SIMPLE_LOG_FORMAT = conf.get('core', 'simple_log_format')
 
 AIRFLOW_HOME = None
 SQL_ALCHEMY_CONN = None
@@ -117,27 +112,6 @@ def policy(task_instance):
     pass
 
 
-def configure_logging(log_format=LOG_FORMAT):
-
-    def _configure_logging(logging_level):
-        global LOGGING_LEVEL
-        logging.root.handlers = []
-        logging.basicConfig(
-            format=log_format, stream=sys.stdout, level=logging_level)
-        LOGGING_LEVEL = logging_level
-
-    if "logging_level" in conf.as_dict()["core"]:
-        logging_level = conf.get('core', 'LOGGING_LEVEL').upper()
-    else:
-        logging_level = LOGGING_LEVEL
-    try:
-        _configure_logging(logging_level)
-    except ValueError:
-        logging.warning("Logging level {} is not defined. "
-                        "Use default.".format(logging_level))
-        _configure_logging(logging.INFO)
-
-
 def configure_vars():
     global AIRFLOW_HOME
     global SQL_ALCHEMY_CONN
@@ -163,9 +137,11 @@ def configure_orm(disable_connection_pool=False):
     Session = scoped_session(
         sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
+
 try:
     from airflow_local_settings import *
-    logging.info("Loaded airflow_local_settings.")
+
+    log.info("Loaded airflow_local_settings.")
 except:
     pass
 

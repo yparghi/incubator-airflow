@@ -34,6 +34,9 @@ class TestSparkSubmitOperator(unittest.TestCase):
         'files': 'hive-site.xml',
         'py_files': 'sample_library.py',
         'jars': 'parquet.jar',
+        'packages': 'com.databricks:spark-avro_2.11:3.2.0',
+        'exclude_packages': 'org.bad.dependency:1.0.0',
+        'repositories': 'http://myrepo.org',
         'total_executor_cores':4,
         'executor_cores': 4,
         'executor_memory': '22g',
@@ -46,10 +49,11 @@ class TestSparkSubmitOperator(unittest.TestCase):
         'driver_memory': '3g',
         'java_class': 'com.foo.bar.AppMain',
         'application_args': [
-            '-f foo',
-            '--bar bar',
-            '--start {{ macros.ds_add(ds, -1)}}',
-            '--end {{ ds }}'
+            '-f', 'foo',
+            '--bar', 'bar',
+            '--start', '{{ macros.ds_add(ds, -1)}}',
+            '--end', '{{ ds }}',
+            '--with-spaces', 'args should keep embdedded spaces',
         ]
     }
 
@@ -83,6 +87,9 @@ class TestSparkSubmitOperator(unittest.TestCase):
             'files': 'hive-site.xml',
             'py_files': 'sample_library.py',
             'jars': 'parquet.jar',
+            'packages': 'com.databricks:spark-avro_2.11:3.2.0',
+            'exclude_packages': 'org.bad.dependency:1.0.0',
+            'repositories': 'http://myrepo.org',
             'total_executor_cores': 4,
             'executor_cores': 4,
             'executor_memory': '22g',
@@ -95,10 +102,11 @@ class TestSparkSubmitOperator(unittest.TestCase):
             'driver_memory': '3g',
             'java_class': 'com.foo.bar.AppMain',
             'application_args': [
-                '-f foo',
-                '--bar bar',
-                '--start {{ macros.ds_add(ds, -1)}}',
-                '--end {{ ds }}'
+                '-f', 'foo',
+                '--bar', 'bar',
+                '--start', '{{ macros.ds_add(ds, -1)}}',
+                '--end', '{{ ds }}',
+                '--with-spaces', 'args should keep embdedded spaces',
             ]
 
         }
@@ -109,6 +117,9 @@ class TestSparkSubmitOperator(unittest.TestCase):
         self.assertEqual(expected_dict['files'], operator._files)
         self.assertEqual(expected_dict['py_files'], operator._py_files)
         self.assertEqual(expected_dict['jars'], operator._jars)
+        self.assertEqual(expected_dict['packages'], operator._packages)
+        self.assertEqual(expected_dict['exclude_packages'], operator._exclude_packages)
+        self.assertEqual(expected_dict['repositories'], operator._repositories)
         self.assertEqual(expected_dict['total_executor_cores'], operator._total_executor_cores)
         self.assertEqual(expected_dict['executor_cores'], operator._executor_cores)
         self.assertEqual(expected_dict['executor_memory'], operator._executor_memory)
@@ -130,14 +141,15 @@ class TestSparkSubmitOperator(unittest.TestCase):
         ti.render_templates()
 
         # Then
-        expected_application_args = [u'-f foo',
-                                     u'--bar bar',
-                                     u'--start %s' % (DEFAULT_DATE - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
-                                     u'--end %s' % DEFAULT_DATE.strftime("%Y-%m-%d")]
+        expected_application_args = [u'-f', 'foo',
+                                     u'--bar', 'bar',
+                                     u'--start', (DEFAULT_DATE - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
+                                     u'--end', DEFAULT_DATE.strftime("%Y-%m-%d"),
+                                     u'--with-spaces', u'args should keep embdedded spaces',
+                                     ]
         expected_name = "spark_submit_job"
-        self.assertListEqual(sorted(expected_application_args), sorted(getattr(operator, '_application_args')))
+        self.assertListEqual(expected_application_args, getattr(operator, '_application_args'))
         self.assertEqual(expected_name, getattr(operator, '_name'))
-
 
 if __name__ == '__main__':
     unittest.main()

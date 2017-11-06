@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
-
 import airflow.api
 
+from airflow.api.common.experimental import pool as pool_api
 from airflow.api.common.experimental import trigger_dag as trigger
 from airflow.api.common.experimental.get_task import get_task
 from airflow.api.common.experimental.get_task_instance import get_task_instance
 from airflow.exceptions import AirflowException
+from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.www.app import csrf
 
 from flask import (
@@ -27,7 +27,7 @@ from flask import (
 )
 from datetime import datetime
 
-_log = logging.getLogger(__name__)
+_log = LoggingMixin().log
 
 requires_authentication = airflow.api.api_auth.requires_authentication
 
@@ -96,7 +96,6 @@ def test():
 @requires_authentication
 def task_info(dag_id, task_id):
     """Returns a JSON with a task's public instance variables. """
-
     try:
         info = get_task(dag_id, task_id)
     except AirflowException as err:
@@ -155,9 +154,9 @@ def task_instance_info(dag_id, execution_date, task_id):
 @api_experimental.route('/latest_runs', methods=['GET'])
 @requires_authentication
 def latest_dag_runs():
-    """Returns the latest running DagRun for each DAG formatted for the UI. """
+    """Returns the latest DagRun for each DAG formatted for the UI. """
     from airflow.models import DagRun
-    dagruns = DagRun.get_all_latest_runs()
+    dagruns = DagRun.get_latest_runs()
     payload = []
     for dagrun in dagruns:
         if dagrun.execution_date:
@@ -169,4 +168,67 @@ def latest_dag_runs():
                 'dag_run_url': url_for('airflow.graph', dag_id=dagrun.dag_id,
                                        execution_date=dagrun.execution_date)
             })
-    return jsonify(items=payload) # old flask versions dont support jsonifying arrays
+    return jsonify(items=payload)  # old flask versions dont support jsonifying arrays
+
+
+@api_experimental.route('/pools/<string:name>', methods=['GET'])
+@requires_authentication
+def get_pool(name):
+    """Get pool by a given name."""
+    try:
+        pool = pool_api.get_pool(name=name)
+    except AirflowException as e:
+        _log.error(e)
+        response = jsonify(error="{}".format(e))
+        response.status_code = getattr(e, 'status', 500)
+        return response
+    else:
+        return jsonify(pool.to_json())
+
+
+@api_experimental.route('/pools', methods=['GET'])
+@requires_authentication
+def get_pools():
+    """Get all pools."""
+    try:
+        pools = pool_api.get_pools()
+    except AirflowException as e:
+        _log.error(e)
+        response = jsonify(error="{}".format(e))
+        response.status_code = getattr(e, 'status', 500)
+        return response
+    else:
+        return jsonify([p.to_json() for p in pools])
+
+
+@csrf.exempt
+@api_experimental.route('/pools', methods=['POST'])
+@requires_authentication
+def create_pool():
+    """Create a pool."""
+    params = request.get_json(force=True)
+    try:
+        pool = pool_api.create_pool(**params)
+    except AirflowException as e:
+        _log.error(e)
+        response = jsonify(error="{}".format(e))
+        response.status_code = getattr(e, 'status', 500)
+        return response
+    else:
+        return jsonify(pool.to_json())
+
+
+@csrf.exempt
+@api_experimental.route('/pools/<string:name>', methods=['DELETE'])
+@requires_authentication
+def delete_pool(name):
+    """Delete pool."""
+    try:
+        pool = pool_api.delete_pool(name=name)
+    except AirflowException as e:
+        _log.error(e)
+        response = jsonify(error="{}".format(e))
+        response.status_code = getattr(e, 'status', 500)
+        return response
+    else:
+        return jsonify(pool.to_json())

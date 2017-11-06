@@ -34,5 +34,3 @@ run_this_2 = DummyOperator(task_id='run_this_2', dag=dag)
 run_this_2.set_upstream(run_this_1)
 run_this_3 = DummyOperator(task_id='run_this_3', dag=dag)
 run_this_3.set_upstream(run_this_2)
-
-
