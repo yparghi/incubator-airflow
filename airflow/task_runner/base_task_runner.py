@@ -11,15 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import unicode_literals
 
 import getpass
 import os
 import json
 import subprocess
 import threading
-
-from airflow.utils.log.logging_mixin import LoggingMixin
 
 from airflow import configuration as conf
 from tempfile import mkstemp
