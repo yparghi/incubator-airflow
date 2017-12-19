@@ -18,6 +18,7 @@ import json
 import subprocess
 import threading
 
+from airflow import LoggingMixin
 from airflow import configuration as conf
 from tempfile import mkstemp
 
