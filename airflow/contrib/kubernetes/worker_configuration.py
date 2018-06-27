@@ -128,15 +128,23 @@ class WorkerConfiguration(LoggingMixin):
             ),
             _construct_volume(
                 logs_volume_name,
-                self.kube_config.logs_volume_claim
+                self.kube_config.logs_volume_claim,
+                self.kube_config.logs_volume_subpath
             )
         ]
-        volume_mounts = [{
-            'name': dags_volume_name,
-            'mountPath': os.path.join(
+
+        dag_volume_mount_path = ""
+        if self.kube_config.dags_volume_claim:
+            dag_volume_mount_path = self.worker_airflow_dags
+        else:
+            dag_volume_mount_path = os.path.join(
                 self.worker_airflow_dags,
                 self.kube_config.git_subpath
-            ),
+            )
+
+        volume_mounts = [{
+            'name': dags_volume_name,
+            'mountPath': dag_volume_mount_path,
             'readOnly': True
         }, {
             'name': logs_volume_name,
@@ -177,15 +185,13 @@ class WorkerConfiguration(LoggingMixin):
         annotations = {
             'iam.cloud.google.com/service-account': gcp_sa_key
         } if gcp_sa_key else {}
-        airflow_command = airflow_command.replace("-sd", "-i -sd")
-        airflow_path = airflow_command.split('-sd')[-1]
-        airflow_path = self.worker_airflow_home + airflow_path.split('/')[-1]
-        airflow_command = airflow_command.split('-sd')[0] + '-sd ' + airflow_path
 
         return Pod(
             namespace=namespace,
             name=pod_id,
             image=kube_executor_config.image or self.kube_config.kube_image,
+            image_pull_policy=(kube_executor_config.image_pull_policy or
+                               self.kube_config.kube_image_pull_policy),
             cmds=['bash', '-cx', '--'],
             args=[airflow_command],
             labels={

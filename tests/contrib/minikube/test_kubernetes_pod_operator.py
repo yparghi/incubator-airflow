@@ -16,11 +16,16 @@
 # under the License.
 
 import unittest
+import os
+import shutil
 from airflow.contrib.operators.kubernetes_pod_operator import KubernetesPodOperator
 from airflow import AirflowException
 from subprocess import check_call
 import mock
+import json
 from airflow.contrib.kubernetes.pod_launcher import PodLauncher
+from airflow.contrib.kubernetes.volume_mount import VolumeMount
+from airflow.contrib.kubernetes.volume import Volume
 
 try:
     check_call(["kubectl", "get", "pods"])
@@ -32,12 +37,54 @@ except Exception as e:
 
 
 class KubernetesPodOperatorTest(unittest.TestCase):
+
+    def test_config_path_move(self):
+        new_config_path = '/tmp/kube_config'
+        old_config_path = os.path.expanduser('~/.kube/config')
+        shutil.copy(old_config_path, new_config_path)
+
+        k = KubernetesPodOperator(
+            namespace='default',
+            image="ubuntu:16.04",
+            cmds=["bash", "-cx"],
+            arguments=["echo 10"],
+            labels={"foo": "bar"},
+            name="test",
+            task_id="task",
+            config_file=new_config_path
+        )
+        k.execute(None)
+
+    @mock.patch("airflow.contrib.kubernetes.pod_launcher.PodLauncher.run_pod")
+    @mock.patch("airflow.contrib.kubernetes.kube_client.get_kube_client")
+    def test_config_path(self, client_mock, launcher_mock):
+        from airflow.utils.state import State
+
+        file_path = "/tmp/fake_file"
+        k = KubernetesPodOperator(
+            namespace='default',
+            image="ubuntu:16.04",
+            cmds=["bash", "-cx"],
+            arguments=["echo 10"],
+            labels={"foo": "bar"},
+            name="test",
+            task_id="task",
+            config_file=file_path,
+            in_cluster=False,
+            cluster_context='default'
+        )
+        launcher_mock.return_value = (State.SUCCESS, None)
+        k.execute(None)
+        client_mock.assert_called_with(in_cluster=False,
+                                       cluster_context='default',
+                                       config_file=file_path)
+
     def test_working_pod(self):
         k = KubernetesPodOperator(
             namespace='default',
             image="ubuntu:16.04",
             cmds=["bash", "-cx"],
-            arguments=["echo", "10"],
+            arguments=["echo 10"],
             labels={"foo": "bar"},
             name="test",
             task_id="task"
@@ -50,14 +97,42 @@ class KubernetesPodOperatorTest(unittest.TestCase):
                 namespace='default',
                 image="ubuntu:16.04",
                 cmds=["bash", "-cx"],
-                arguments=["echo", "10"],
+                arguments=["echo 10"],
                 labels={"foo": "bar"},
                 name="test",
                 task_id="task",
                 get_logs=True
             )
             k.execute(None)
-            mock_logger.info.assert_any_call(b"+ echo\n")
+            mock_logger.info.assert_any_call(b"+ echo 10\n")
+
+    def test_volume_mount(self):
+        with mock.patch.object(PodLauncher, 'log') as mock_logger:
+            volume_mount = VolumeMount('test-volume',
+                                       mount_path='/root/mount_file',
+                                       sub_path=None,
+                                       read_only=True)
+
+            volume_config = {
+                'persistentVolumeClaim':
+                    {
+                        'claimName': 'test-volume'
+                    }
+            }
+            volume = Volume(name='test-volume', configs=volume_config)
+            k = KubernetesPodOperator(
+                namespace='default',
+                image="ubuntu:16.04",
+                cmds=["bash", "-cx"],
+                arguments=["cat /root/mount_file/test.txt"],
+                labels={"foo": "bar"},
+                volume_mounts=[volume_mount],
+                volumes=[volume],
+                name="test",
+                task_id="task"
+            )
+            k.execute(None)
+            mock_logger.info.assert_any_call(b"retrieved from mount\n")
 
     def test_faulty_image(self):
         bad_image_name = "foobar"
@@ -65,7 +140,7 @@ class KubernetesPodOperatorTest(unittest.TestCase):
             namespace='default',
             image=bad_image_name,
             cmds=["bash", "-cx"],
-            arguments=["echo", "10"],
+            arguments=["echo 10"],
             labels={"foo": "bar"},
             name="test",
             task_id="task",
@@ -85,13 +160,27 @@ class KubernetesPodOperatorTest(unittest.TestCase):
             namespace='default',
             image="ubuntu:16.04",
             cmds=["bash", "-cx"],
-            arguments=[bad_internal_command, "10"],
+            arguments=[bad_internal_command + " 10"],
             labels={"foo": "bar"},
             name="test",
             task_id="task"
         )
         with self.assertRaises(AirflowException):
             k.execute(None)
+
+    def test_xcom_push(self):
+        return_value = '{"foo": "bar"\n, "buzz": 2}'
+        k = KubernetesPodOperator(
+            namespace='default',
+            image="ubuntu:16.04",
+            cmds=["bash", "-cx"],
+            arguments=['echo \'{}\' > /airflow/xcom/return.json'.format(return_value)],
+            labels={"foo": "bar"},
+            name="test",
+            task_id="task",
+            xcom_push=True
+        )
+        self.assertEqual(k.execute(None), json.loads(return_value))
 
 
 if __name__ == '__main__':

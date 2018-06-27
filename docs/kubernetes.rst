@@ -19,6 +19,67 @@ Kubernetes Operator
 
     secret_file = Secret('volume', '/etc/sql_conn', 'airflow-secrets', 'sql_alchemy_conn')
     secret_env  = Secret('env', 'SQL_CONN', 'airflow-secrets', 'sql_alchemy_conn')
+    volume_mount = VolumeMount('test-volume',
+                                mount_path='/root/mount_file',
+                                sub_path=None,
+                                read_only=True)
+
+    volume_config= {
+        'persistentVolumeClaim':
+          {
+            'claimName': 'test-volume'
+          }
+        }
+    volume = Volume(name='test-volume', configs=volume_config)
+
+    affinity = {
+        'nodeAffinity': {
+          'preferredDuringSchedulingIgnoredDuringExecution': [
+            {
+              "weight": 1,
+              "preference": {
+                "matchExpressions": [
+                  "key": "disktype",
+                  "operator": "In",
+                  "values": ["ssd"]
+                ]
+              }
+            }
+          ]
+        },
+        "podAffinity": {
+          "requiredDuringSchedulingIgnoredDuringExecution": [
+            {
+              "labelSelector": {
+                "matchExpressions": [
+                  {
+                    "key": "security",
+                    "operator": "In",
+                    "values": ["S1"]
+                  }
+                ]
+              },
+              "topologyKey": "failure-domain.beta.kubernetes.io/zone"
+            }
+          ]
+        },
+        "podAntiAffinity": {
+          "requiredDuringSchedulingIgnoredDuringExecution": [
+            {
+              "labelSelector": {
+                "matchExpressions": [
+                  {
+                    "key": "security",
+                    "operator": "In",
+                    "values": ["S2"]
+                  }
+                ]
+              },
+              "topologyKey": "kubernetes.io/hostname"
+            }
+          ]
+        }
+    }
 
     k = KubernetesPodOperator(namespace='default',
                               image="ubuntu:16.04",
@@ -26,12 +87,15 @@ Kubernetes Operator
                               arguments=["echo", "10"],
                               labels={"foo": "bar"},
                               secrets=[secret_file,secret_env]
+                              volume=[volume],
+                              volume_mounts=[volume_mount]
                               name="test",
-                              task_id="task"
+                              task_id="task",
+                              affinity=affinity
                               )
 
 
 .. autoclass:: airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator
 
-.. autoclass:: airflow.contrib.operators.secret.Secret
+.. autoclass:: airflow.contrib.kubernetes.secret.Secret
 

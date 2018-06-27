@@ -949,6 +949,26 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(run_command('echo "foo bar"'), u'foo bar\n')
         self.assertRaises(AirflowConfigException, run_command, 'bash -c "exit 1"')
 
+    def test_trigger_dagrun_with_execution_date(self):
+        utc_now = timezone.utcnow()
+        run_id = 'trig__' + utc_now.isoformat()
+
+        def payload_generator(context, object):
+            object.run_id = run_id
+            return object
+
+        task = TriggerDagRunOperator(task_id='test_trigger_dagrun_with_execution_date',
+                                     trigger_dag_id='example_bash_operator',
+                                     python_callable=payload_generator,
+                                     execution_date=utc_now,
+                                     dag=self.dag)
+        task.run(start_date=DEFAULT_DATE, end_date=DEFAULT_DATE, ignore_ti_state=True)
+        dag_runs = models.DagRun.find(dag_id='example_bash_operator',
+                                      run_id=run_id)
+        self.assertEquals(len(dag_runs), 1)
+        dag_run = dag_runs[0]
+        self.assertEquals(dag_run.execution_date, utc_now)
+
 
 class CliTests(unittest.TestCase):
 
@@ -1038,6 +1058,7 @@ class CliTests(unittest.TestCase):
         self.assertIn(['mysql_default', 'mysql'], conns)
         self.assertIn(['postgres_default', 'postgres'], conns)
         self.assertIn(['wasb_default', 'wasb'], conns)
+        self.assertIn(['segment_default', 'segment'], conns)
 
         # Attempt to list connections with invalid cli args
         with mock.patch('sys.stdout',
@@ -1844,6 +1865,44 @@ class SecureModeWebUiTests(unittest.TestCase):
         configuration.conf.remove_option("core", "SECURE_MODE")
 
 
+class PasswordUserTest(unittest.TestCase):
+    def setUp(self):
+        user = models.User()
+        from airflow.contrib.auth.backends.password_auth import PasswordUser
+        self.password_user = PasswordUser(user)
+        self.password_user.username = "password_test"
+
+    @mock.patch('airflow.contrib.auth.backends.password_auth.generate_password_hash')
+    def test_password_setter(self, mock_gen_pass_hash):
+        mock_gen_pass_hash.return_value = b"hashed_pass" if six.PY3 else "hashed_pass"
+
+        self.password_user.password = "secure_password"
+        mock_gen_pass_hash.assert_called_with("secure_password", 12)
+
+    def test_password_unicode(self):
+        # In python2.7 no conversion is required back to str
+        # In python >= 3 the method must convert from bytes to str
+        self.password_user.password = "secure_password"
+        self.assertIsInstance(self.password_user.password, str)
+
+    def test_password_user_authenticate(self):
+        self.password_user.password = "secure_password"
+        self.assertTrue(self.password_user.authenticate("secure_password"))
+
+    def test_password_authenticate_session(self):
+        from airflow.contrib.auth.backends.password_auth import PasswordUser
+        self.password_user.password = 'test_password'
+        session = Session()
+        session.add(self.password_user)
+        session.commit()
+        query_user = session.query(PasswordUser).filter_by(
+            username=self.password_user.username).first()
+        self.assertTrue(query_user.authenticate('test_password'))
+        session.query(models.User).delete()
+        session.commit()
+        session.close()
+
+
 class WebPasswordAuthTest(unittest.TestCase):
     def setUp(self):
         configuration.conf.set("webserver", "authenticate", "True")
@@ -1982,6 +2041,9 @@ class WebLdapAuthTest(unittest.TestCase):
 
         response = self.login('dataprofiler', 'dataprofiler')
         self.assertIn('Data Profiling', response.data.decode('utf-8'))
+
+        response = self.logout()
+        self.assertIn('form-signin', response.data.decode('utf-8'))
 
         response = self.login('superuser', 'superuser')
         self.assertIn('Connections', response.data.decode('utf-8'))
@@ -2292,11 +2354,10 @@ class WebHDFSHookTest(unittest.TestCase):
         self.assertEqual('someone', c.proxy_user)
 
 
-try:
+HDFSHook = None
+if six.PY2:
     from airflow.hooks.hdfs_hook import HDFSHook
     import snakebite
-except ImportError:
-    HDFSHook = None
 
 
 @unittest.skipIf(HDFSHook is None,
@@ -2340,56 +2401,6 @@ class HDFSHookTest(unittest.TestCase):
         mock_get_connections.return_value = [c1, c2]
         client = HDFSHook().get_conn()
         self.assertIsInstance(client, snakebite.client.HAClient)
-
-
-try:
-    from airflow.hooks.http_hook import HttpHook
-except ImportError:
-    HttpHook = None
-
-
-@unittest.skipIf(HttpHook is None,
-                 "Skipping test because HttpHook is not installed")
-class HttpHookTest(unittest.TestCase):
-    def setUp(self):
-        configuration.load_test_config()
-
-    @mock.patch('airflow.hooks.http_hook.HttpHook.get_connection')
-    def test_http_connection(self, mock_get_connection):
-        c = models.Connection(conn_id='http_default', conn_type='http',
-                              host='localhost', schema='http')
-        mock_get_connection.return_value = c
-        hook = HttpHook()
-        hook.get_conn({})
-        self.assertEqual(hook.base_url, 'http://localhost')
-
-    @mock.patch('airflow.hooks.http_hook.HttpHook.get_connection')
-    def test_https_connection(self, mock_get_connection):
-        c = models.Connection(conn_id='http_default', conn_type='http',
-                              host='localhost', schema='https')
-        mock_get_connection.return_value = c
-        hook = HttpHook()
-        hook.get_conn({})
-        self.assertEqual(hook.base_url, 'https://localhost')
-
-    @mock.patch('airflow.hooks.http_hook.HttpHook.get_connection')
-    def test_host_encoded_http_connection(self, mock_get_connection):
-        c = models.Connection(conn_id='http_default', conn_type='http',
-                              host='http://localhost')
-        mock_get_connection.return_value = c
-        hook = HttpHook()
-        hook.get_conn({})
-        self.assertEqual(hook.base_url, 'http://localhost')
-
-    @mock.patch('airflow.hooks.http_hook.HttpHook.get_connection')
-    def test_host_encoded_https_connection(self, mock_get_connection):
-        c = models.Connection(conn_id='http_default', conn_type='http',
-                              host='https://localhost')
-        mock_get_connection.return_value = c
-        hook = HttpHook()
-        hook.get_conn({})
-        self.assertEqual(hook.base_url, 'https://localhost')
-
 
 send_email_test = mock.Mock()
 

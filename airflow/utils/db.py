@@ -7,9 +7,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -140,6 +140,10 @@ def initdb(rbac=False):
             port=9083))
     merge_conn(
         models.Connection(
+            conn_id='mongo_default', conn_type='mongo',
+            host='localhost', port=27017))
+    merge_conn(
+        models.Connection(
             conn_id='mysql_default', conn_type='mysql',
             login='root',
             host='localhost'))
@@ -268,6 +272,18 @@ def initdb(rbac=False):
         models.Connection(
             conn_id='qubole_default', conn_type='qubole',
             host= 'localhost'))
+    merge_conn(
+        models.Connection(
+            conn_id='segment_default', conn_type='segment',
+            extra='{"write_key": "my-segment-write-key"}')),
+    merge_conn(
+        models.Connection(
+            conn_id='azure_data_lake_default', conn_type='azure_data_lake',
+            extra='{"tenant": "<TENANT>", "account_name": "<ACCOUNTNAME>" }'))
+    merge_conn(
+        models.Connection(
+            conn_id='cassandra_default', conn_type='cassandra',
+            host='localhost', port=9042))
 
     # Known event types
     KET = models.KnownEventType
@@ -331,9 +347,9 @@ def upgradedb():
 
 
 def resetdb(rbac):
-    '''
+    """
     Clear out the database
-    '''
+    """
     from airflow import models
 
     # alembic adds significant import time, so we import it lazily
