@@ -150,6 +150,7 @@ gcp_api = [
     'google-auth-httplib2>=0.0.1',
     'google-cloud-container>=0.1.1',
     'PyOpenSSL',
+    'google-cloud-dataflow==2.2.0',
     'pandas-gbq'
 ]
 github_enterprise = ['Flask-OAuthlib>=0.9.1']
@@ -267,7 +268,7 @@ def do_setup():
             'jinja2>=2.7.3, <2.9.0',
             'lxml>=3.6.0, <4.0',
             'markdown>=2.5.2, <3.0',
-            'pandas>=0.17.1, <1.0.0',
+            'pandas>=0.17.1, <0.20.0',
             'pendulum==1.4.4',
             'psutil>=4.2.0, <5.0.0',
             'pygments>=2.0.1, <3.0',

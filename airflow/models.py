@@ -22,6 +22,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import calendar
+
 from future.standard_library import install_aliases
 
 from builtins import str
@@ -98,7 +100,7 @@ from airflow.utils.log.logging_mixin import LoggingMixin
 install_aliases()
 
 Base = declarative_base()
-ID_LEN = 250
+ID_LEN = 191
 XCOM_RETURN_KEY = 'return_value'
 
 Stats = settings.Stats
@@ -1792,7 +1794,13 @@ class TaskInstance(Base, LoggingMixin):
         tomorrow_ds = (self.execution_date + timedelta(1)).strftime('%Y-%m-%d')
 
         prev_execution_date = task.dag.previous_schedule(self.execution_date)
+        prev_ds = prev_execution_date.isoformat()[:10] if prev_execution_date else None
         next_execution_date = task.dag.following_schedule(self.execution_date)
+        next_ds = next_execution_date.isoformat()[:10] if next_execution_date else None
+        month_first_date = self.execution_date.replace(day=1)
+        month_first_ds = month_first_date.isoformat()[:10]
+        month_last_date = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
+        month_last_ds = month_last_date.isoformat()[:10]
 
         next_ds = None
         if next_execution_date:
@@ -1806,6 +1814,10 @@ class TaskInstance(Base, LoggingMixin):
         ts_nodash = ts.replace('-', '').replace(':', '')
         yesterday_ds_nodash = yesterday_ds.replace('-', '')
         tomorrow_ds_nodash = tomorrow_ds.replace('-', '')
+        prev_ds_nodash = prev_ds.replace('-', '') if prev_ds else None
+        next_ds_nodash = next_ds.replace('-', '') if next_ds else None
+        month_first_ds_nodash = month_first_ds.replace('-', '')
+        month_last_ds_nodash = month_last_ds.replace('-', '')
 
         ti_key_str = "{task.dag_id}__{task.task_id}__{ds_nodash}"
         ti_key_str = ti_key_str.format(**locals())
@@ -1881,7 +1893,15 @@ class TaskInstance(Base, LoggingMixin):
             'run_id': run_id,
             'execution_date': self.execution_date,
             'prev_execution_date': prev_execution_date,
+            'prev_ds': prev_ds,
+            'prev_ds_nodash': prev_ds_nodash,
             'next_execution_date': next_execution_date,
+            'next_ds': next_ds,
+            'next_ds_nodash': next_ds_nodash,
+            'month_first_ds': month_first_ds,
+            'month_first_ds_nodash': month_first_ds_nodash,
+            'month_last_ds': month_last_ds,
+            'month_last_ds_nodash': month_last_ds_nodash,
             'latest_date': ds,
             'macros': macros,
             'params': params,
@@ -1916,8 +1936,22 @@ class TaskInstance(Base, LoggingMixin):
         for attr in task.__class__.template_fields:
             content = getattr(task, attr)
             if content:
-                rendered_content = rt(attr, content, jinja_context)
-                setattr(task, attr, rendered_content)
+                last_content = content
+                done_rendering = False
+                iterations = 0
+                while not done_rendering:
+                    rendered_content = rt(attr, last_content, jinja_context)
+                    if iterations > 5:
+                        logging.info('Stuck in loop!!!!')
+                        break
+
+                    if last_content == rendered_content:
+                        done_rendering = True
+
+                    last_content = rendered_content
+                    iterations += 1
+
+                setattr(task, attr, last_content)
 
     def email_alert(self, exception, is_retry=False):
         task = self.task
@@ -5141,6 +5175,28 @@ class DagRun(Base, LoggingMixin):
     @provide_session
     def get_latest_runs(cls, session):
         """Returns the latest DagRun for each DAG. """
+        subquery = (
+            session
+            .query(
+                cls.dag_id,
+                func.max(cls.execution_date).label('execution_date'))
+            .group_by(cls.dag_id)
+            .subquery()
+        )
+        dagruns = (
+            session
+            .query(cls)
+            .join(subquery,
+                  and_(cls.dag_id == subquery.c.dag_id,
+                       cls.execution_date == subquery.c.execution_date))
+            .all()
+        )
+        return dagruns
+
+    @classmethod
+    @provide_session
+    def get_all_latest_runs(cls, session):
+        """Returns the latest running DagRun for each DAG. """
         subquery = (
             session
             .query(

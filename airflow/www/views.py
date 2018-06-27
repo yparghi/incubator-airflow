@@ -1309,6 +1309,10 @@ class Airflow(BaseView):
         dag_id = request.args.get('dag_id')
         blur = conf.getboolean('webserver', 'demo_mode')
         dag = dagbag.get_dag(dag_id)
+        if not dag:
+            dagbag.collect_dags(only_if_updated=False)
+            dag = dagbag.get_dag(dag_id)
+
         if dag_id not in dagbag.dags:
             flash('DAG "{0}" seems to be missing.'.format(dag_id), "error")
             return redirect('/admin/')
@@ -1413,7 +1417,7 @@ class Airflow(BaseView):
                 for d in dates],
         }
 
-        data = json.dumps(data, indent=4, default=json_ser)
+        data = json.dumps(data, indent=None, default=json_ser)
         session.commit()
 
         form = DateTimeWithNumRunsForm(data={'base_date': max_date,
