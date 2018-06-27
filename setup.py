@@ -223,14 +223,15 @@ devel_hadoop = devel_minreq + hive + hdfs + webhdfs + kerberos
 devel_all = (sendgrid + devel + all_dbs + doc + samba + s3 + slack + crypto + oracle +
              docker + ssh + kubernetes + celery + azure_blob_storage + redis + gcp_api +
              datadog + zendesk + jdbc + ldap + kerberos + password + webhdfs + jenkins +
-             druid + pinot + segment + snowflake + elasticsearch + azure_data_lake, atlas)
+             druid + pinot + segment + snowflake + elasticsearch + azure_data_lake +
+             atlas)
 
 # Snakebite & Google Cloud Dataflow are not Python 3 compatible :'(
 if PY3:
     devel_ci = [package for package in devel_all if package not in
                 ['snakebite>=2.7.8', 'snakebite[kerberos]>=2.7.8']]
 else:
-    devel_ci = devel_all
+    devel_ci = devel_all + ['unittest2']
 
 
 def do_setup():
