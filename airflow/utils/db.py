@@ -64,28 +64,8 @@ def provide_session(func):
         func_params = func.__code__.co_varnames
 
         session_in_args = arg_session in func_params and \
-<<<<<<< fc00875ed00555e5da5661324479e8703787bbd5
             func_params.index(arg_session) < len(args)
         session_in_kwargs = arg_session in kwargs
-=======
-            func_params.index(arg_session) < len(args) and \
-            args[func_params.index(arg_session)] is not None
-
-        session_in_kwargs = arg_session in kwargs and \
-            kwargs[arg_session] is not None
-
-        if not (session_in_kwargs or session_in_args):
-            needs_session = True
-            session = settings.Session()
-            kwargs[arg_session] = session
-        result = func(*args, **kwargs)
-        if needs_session:
-            session.expunge_all()
-            session.commit()
-            session.close()
-        return result
-    return wrapper
->>>>>>> 
 
         if session_in_kwargs or session_in_args:
             return func(*args, **kwargs)
