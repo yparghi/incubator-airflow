@@ -25,7 +25,7 @@ from airflow.models import DagBag
 def get_task_instance(dag_id, task_id, execution_date):
     """Return the task object identified by the given dag_id and task_id."""
 
-    dagbag = DagBag()
+    dagbag = DagBag(include_dag_ids=[dag_id])
 
     # Check DAG exists.
     if dag_id not in dagbag.dags:

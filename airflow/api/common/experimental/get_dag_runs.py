@@ -30,7 +30,7 @@ def get_dag_runs(dag_id, state=None):
     :return: List of DAG runs of a DAG with requested state,
     or all runs if the state is not specified
     """
-    dagbag = DagBag()
+    dagbag = DagBag(include_dag_ids=[dag_id])
 
     # Check DAG exists.
     if dag_id not in dagbag.dags:
