@@ -86,7 +86,7 @@ def date_range(
         delta = abs(delta)
     dates = []
     if end_date:
-        if timezone.is_naive(start_date):
+        if timezone.is_naive(start_date) and not timezone.is_naive(end_date):
             end_date = timezone.make_naive(end_date, tz)
         while start_date <= end_date:
             if timezone.is_naive(start_date):
