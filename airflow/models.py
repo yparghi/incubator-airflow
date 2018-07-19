@@ -3380,7 +3380,8 @@ class DAG(BaseDag, LoggingMixin):
         :return: utc datetime
         """
         if isinstance(self._schedule_interval, six.string_types):
-            dttm = timezone.make_naive(dttm, self.timezone)
+            if not timezone.is_naive(dttm):
+                dttm = timezone.make_naive(dttm, self.timezone)
             cron = croniter(self._schedule_interval, dttm)
             following = timezone.make_aware(cron.get_next(datetime), self.timezone)
             return timezone.convert_to_utc(following)
@@ -3395,7 +3396,8 @@ class DAG(BaseDag, LoggingMixin):
         :return: utc datetime
         """
         if isinstance(self._schedule_interval, six.string_types):
-            dttm = timezone.make_naive(dttm, self.timezone)
+            if not timezone.is_naive(dttm):
+                dttm = timezone.make_naive(dttm, self.timezone)
             cron = croniter(self._schedule_interval, dttm)
             prev = timezone.make_aware(cron.get_prev(datetime), self.timezone)
             return timezone.convert_to_utc(prev)
