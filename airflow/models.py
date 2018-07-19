@@ -410,16 +410,20 @@ class DagBag(BaseDagBag, LoggingMixin):
             #     a build_dag fn that's also on the global scope
             integrations = m.__dict__.get('integrations', None)
             if integrations:
+                dirs_with_dags = set()
                 for dag_id in list(integrations.keys()):
                     # logging.info('Found integration %s', dag_id)
                     if not include_dag_ids or dag_id in include_dag_ids:
                         root_dir = integrations[dag_id]
-                        collect_dags_fn = m.__dict__.get('collect_dags', None)
-                        if collect_dags_fn:
-                            logging.info('Collecting dags in %s', root_dir)
-                            built_dags = collect_dags_fn(root_dir)
-                            logging.info('Built dags %s', list(built_dags.keys()))
-                            m.__dict__.update(built_dags)
+                        dirs_with_dags.add(root_dir)
+
+                collect_dags_fn = m.__dict__.get('collect_dags', None)
+                if collect_dags_fn:
+                    for root_dir in dirs_with_dags:
+                        logging.info('Collecting dags in %s', root_dir)
+                        built_dags = collect_dags_fn(root_dir)
+                        logging.info('Built dags %s', list(built_dags.keys()))
+                        m.__dict__.update(built_dags)
 
             for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):

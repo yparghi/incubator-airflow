@@ -1282,6 +1282,10 @@ class Airflow(BaseView):
         dag_id = request.args.get('dag_id')
         blur = conf.getboolean('webserver', 'demo_mode')
         dag = dagbag.get_dag(dag_id)
+        if not dag:
+            dagbag.collect_dags(only_if_updated=False)
+            dag = dagbag.get_dag(dag_id)
+
         root = request.args.get('root')
         if root:
             dag = dag.sub_dag(
@@ -1382,7 +1386,7 @@ class Airflow(BaseView):
                 for d in dates],
         }
 
-        data = json.dumps(data, indent=4, default=json_ser)
+        data = json.dumps(data, indent=None, default=json_ser)
         session.commit()
 
         form = DateTimeWithNumRunsForm(data={'base_date': max_date,
