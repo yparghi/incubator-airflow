@@ -139,7 +139,8 @@ def process_subdir(subdir):
 
 
 def get_dag(args):
-    dagbag = DagBag(process_subdir(args.subdir))
+    logging.info('Getting dag with ID %s', args.dag_id)
+    dagbag = DagBag(process_subdir(args.subdir), include_dag_ids=[args.dag_id])
     if args.dag_id not in dagbag.dags:
         raise AirflowException(
             'dag_id could not be found: {}. Either the dag did not exist or it failed to '

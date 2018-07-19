@@ -250,7 +250,8 @@ class DagBag(BaseDagBag, LoggingMixin):
             self,
             dag_folder=None,
             executor=None,
-            include_examples=configuration.conf.getboolean('core', 'LOAD_EXAMPLES')):
+            include_examples=configuration.conf.getboolean('core', 'LOAD_EXAMPLES'),
+            include_dag_ids=None):
 
         # do not use default arg in signature, to fix import cycle on plugin load
         if executor is None:
@@ -270,7 +271,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                 os.path.dirname(__file__),
                 'example_dags')
             self.collect_dags(example_dag_folder)
-        self.collect_dags(dag_folder)
+        self.collect_dags(dag_folder, include_dag_ids=include_dag_ids)
 
     def size(self):
         """
@@ -309,7 +310,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                 del self.dags[dag_id]
         return self.dags.get(dag_id)
 
-    def process_file(self, filepath, only_if_updated=True, safe_mode=True):
+    def process_file(self, filepath, only_if_updated=True, safe_mode=True, include_dag_ids=None):
         """
         Given a path to a python module or zip file, this method imports
         the module and look for dag objects within it.
@@ -404,17 +405,34 @@ class DagBag(BaseDagBag, LoggingMixin):
                         self.file_last_changed[filepath] = file_last_changed_on_disk
 
         for m in mods:
-            for dag in list(m.__dict__.values()):
+
+            # CF: We publish a dictionary called integrations to global scope and then use the data there to invoke
+            #     a build_dag fn that's also on the global scope
+            integrations = m.__dict__.get('integrations', None)
+            if integrations:
+                for dag_id in list(integrations.keys()):
+                    # logging.info('Found integration %s', dag_id)
+                    if not include_dag_ids or dag_id in include_dag_ids:
+                        root_dir = integrations[dag_id]
+                        collect_dags_fn = m.__dict__.get('collect_dags', None)
+                        if collect_dags_fn:
+                            logging.info('Collecting dags in %s', root_dir)
+                            built_dags = collect_dags_fn(root_dir)
+                            logging.info('Built dags %s', list(built_dags.keys()))
+                            m.__dict__.update(built_dags)
+
+        for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):
                     if not dag.full_filepath:
                         dag.full_filepath = filepath
                         if dag.fileloc != filepath:
                             dag.fileloc = filepath
                     try:
-                        dag.is_subdag = False
-                        self.bag_dag(dag, parent_dag=dag, root_dag=dag)
-                        found_dags.append(dag)
-                        found_dags += dag.subdags
+                        if not include_dag_ids or dag.dag_id in include_dag_ids:
+                            dag.is_subdag = False
+                            self.bag_dag(dag, parent_dag=dag, root_dag=dag)
+                            found_dags.append(dag)
+                            found_dags += dag.subdags
                     except AirflowDagCycleException as cycle_exception:
                         self.log.exception("Failed to bag_dag: %s", dag.full_filepath)
                         self.import_errors[dag.full_filepath] = str(cycle_exception)
@@ -504,7 +522,8 @@ class DagBag(BaseDagBag, LoggingMixin):
     def collect_dags(
             self,
             dag_folder=None,
-            only_if_updated=True):
+            only_if_updated=True,
+            include_dag_ids=None):
         """
         Given a file path or a folder, this method looks for python modules,
         imports them and adds them to the dagbag collection.
@@ -526,7 +545,7 @@ class DagBag(BaseDagBag, LoggingMixin):
             try:
                 ts = timezone.utcnow()
                 found_dags = self.process_file(
-                    filepath, only_if_updated=only_if_updated)
+                    filepath, only_if_updated=only_if_updated, include_dag_ids=include_dag_ids)
 
                 td = timezone.utcnow() - ts
                 td = td.total_seconds() + (
