@@ -79,7 +79,8 @@ def date_range(
     tz = start_date.tzinfo
     if isinstance(delta, six.string_types):
         delta_iscron = True
-        start_date = timezone.make_naive(start_date, tz)
+        if not timezone.is_naive(start_date):
+            start_date = timezone.make_naive(start_date, tz)
         cron = croniter(delta, start_date)
     elif isinstance(delta, timedelta):
         delta = abs(delta)
