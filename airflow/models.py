@@ -421,7 +421,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                             logging.info('Built dags %s', list(built_dags.keys()))
                             m.__dict__.update(built_dags)
 
-        for dag in list(m.__dict__.values()):
+            for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):
                     if not dag.full_filepath:
                         dag.full_filepath = filepath
