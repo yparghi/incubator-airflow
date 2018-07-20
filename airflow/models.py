@@ -412,18 +412,19 @@ class DagBag(BaseDagBag, LoggingMixin):
             if integrations:
                 dirs_with_dags = set()
                 for dag_id in list(integrations.keys()):
-                    # logging.info('Found integration %s', dag_id)
-                    if not include_dag_ids or dag_id in include_dag_ids:
+                    logging.info('Found integration %s', dag_id)
+                    if not include_dag_ids or any(item.startswith(dag_id) for item in include_dag_ids):
                         root_dir = integrations[dag_id]
                         dirs_with_dags.add(root_dir)
 
                 collect_dags_fn = m.__dict__.get('collect_dags', None)
+                built_dags = {}
                 if collect_dags_fn:
                     for root_dir in dirs_with_dags:
                         logging.info('Collecting dags in %s', root_dir)
-                        built_dags = collect_dags_fn(root_dir)
-                        logging.info('Built dags %s', list(built_dags.keys()))
-                        m.__dict__.update(built_dags)
+                        built_dags.update(collect_dags_fn(root_dir))
+                logging.info('Built dags %s', list(built_dags.keys()))
+                m.__dict__.update(built_dags)
 
             for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):
@@ -432,7 +433,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                         if dag.fileloc != filepath:
                             dag.fileloc = filepath
                     try:
-                        if not include_dag_ids or dag.dag_id in include_dag_ids:
+                        if not include_dag_ids or any(item.startswith(dag.dag_id) for item in include_dag_ids):
                             dag.is_subdag = False
                             self.bag_dag(dag, parent_dag=dag, root_dag=dag)
                             found_dags.append(dag)
