@@ -1493,7 +1493,8 @@ class Airflow(BaseView):
             'instances': [dag_runs.get(d) or {'execution_date': d.isoformat()} for d in dates],
         }
 
-        data = json.dumps(data, indent=None, default=json_ser)
+        # minimize whitespace as this can be huge for bigger dags
+        data = json.dumps(data, default=json_ser, separators=(',', ':'), indent=None)
         session.commit()
 
         form = DateTimeWithNumRunsForm(data={'base_date': max_date,
