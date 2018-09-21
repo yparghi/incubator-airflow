@@ -99,11 +99,6 @@ def initdb(rbac=False):
             schema='airflow'))
     merge_conn(
         models.Connection(
-            conn_id='airflow_ci', conn_type='mysql',
-            host='mysql', login='root', extra="{\"local_infile\": true}",
-            schema='airflow_ci'))
-    merge_conn(
-        models.Connection(
             conn_id='beeline_default', conn_type='beeline', port="10000",
             host='localhost', extra="{\"use_beeline\": true, \"auth\": \"\"}",
             schema='default'))
@@ -147,6 +142,7 @@ def initdb(rbac=False):
         models.Connection(
             conn_id='mysql_default', conn_type='mysql',
             login='root',
+            schema='airflow',
             host='mysql'))
     merge_conn(
         models.Connection(
