@@ -3470,17 +3470,11 @@ class DAG(BaseDag, LoggingMixin):
         :return: utc datetime
         """
         if isinstance(self._schedule_interval, six.string_types):
-<<<<<<< HEAD
-            if not timezone.is_naive(dttm):
-                dttm = timezone.make_naive(dttm, self.timezone)
-            cron = croniter(self._schedule_interval, dttm)
-            prev = timezone.make_aware(cron.get_prev(datetime), self.timezone)
-            return timezone.convert_to_utc(prev)
-        elif isinstance(self._schedule_interval, timedelta):
-=======
             # we don't want to rely on the transitions created by
             # croniter as they are not always correct
             dttm = pendulum.instance(dttm)
+            # if not timezone.is_naive(dttm):
+            #     dttm = timezone.make_naive(dttm, self.timezone)
             naive = timezone.make_naive(dttm, self.timezone)
             cron = croniter(self._schedule_interval, naive)
 
@@ -3496,7 +3490,6 @@ class DAG(BaseDag, LoggingMixin):
                 previous = timezone.make_aware(naive, tz)
             return timezone.convert_to_utc(previous)
         elif self._schedule_interval is not None:
->>>>>>> Correctly observe DST transitions for cron (#4117)
             return dttm - self._schedule_interval
 
     def get_run_dates(self, start_date, end_date=None):
