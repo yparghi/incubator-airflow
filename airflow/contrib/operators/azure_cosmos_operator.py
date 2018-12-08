@@ -32,7 +32,7 @@ class AzureCosmosInsertDocumentOperator(BaseOperator):
     :param collection_name: The name of the collection. (templated)
     :type collection_name: str
     :param document: The document to insert
-    :type document: json
+    :type document: dict
     :param azure_cosmos_conn_id: reference to a CosmosDB connection.
     :type azure_cosmos_conn_id: str
     """
@@ -58,11 +58,11 @@ class AzureCosmosInsertDocumentOperator(BaseOperator):
         hook = AzureCosmosDBHook(azure_cosmos_conn_id=self.azure_cosmos_conn_id)
 
         # Create the DB if it doesn't already exist
-        if (not hook.does_database_exist(self.database_name)):
+        if not hook.does_database_exist(self.database_name):
             hook.create_database(self.database_name)
 
         # Create the collection as well
-        if (not hook.does_collection_exist(self.collection_name, self.database_name)):
+        if not hook.does_collection_exist(self.collection_name, self.database_name):
             hook.create_collection(self.collection_name, self.database_name)
 
         # finally insert the document

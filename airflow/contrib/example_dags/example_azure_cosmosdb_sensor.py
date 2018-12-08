@@ -29,7 +29,7 @@ this example.*
 
 from airflow import DAG
 from airflow.contrib.sensors.azure_cosmos_sensor import AzureCosmosDocumentSensor
-from airflow.contrib.operators.azure_cosmos_insertdocument_operator import AzureCosmosInsertDocumentOperator
+from airflow.contrib.operators.azure_cosmos_operator import AzureCosmosInsertDocumentOperator
 from airflow.utils import dates
 
 default_args = {
@@ -41,7 +41,7 @@ default_args = {
     'email_on_retry': False
 }
 
-dag = DAG('example_cosmosdb_sensor', default_args=default_args)
+dag = DAG('example_azure_cosmosdb_sensor', default_args=default_args)
 
 dag.doc_md = __doc__
 
@@ -61,4 +61,4 @@ t2 = AzureCosmosInsertDocumentOperator(
     document={"id": "someuniqueid", "param1": "value1", "param2": "value2"},
     azure_cosmos_conn_id='azure_cosmos_default')
 
-t2.set_upstream(t1)
+t1 >> t2
