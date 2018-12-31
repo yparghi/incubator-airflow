@@ -1880,19 +1880,38 @@ class TaskInstance(Base, LoggingMixin):
         if 'tables' in task.params:
             tables = task.params['tables']
 
+        params = {}
+        run_id = ''
+        dag_run = None
+        if hasattr(task, 'dag'):
+            if task.dag.params:
+                params.update(task.dag.params)
+            dag_run = (
+                session.query(DagRun)
+                .filter_by(
+                    dag_id=task.dag.dag_id,
+                    execution_date=self.execution_date)
+                .first()
+            )
+            run_id = dag_run.run_id if dag_run else None
+            session.expunge_all()
+            session.commit()
+
         ds = self.execution_date.strftime('%Y-%m-%d')
         ts = self.execution_date.isoformat()
         yesterday_ds = (self.execution_date - timedelta(1)).strftime('%Y-%m-%d')
         tomorrow_ds = (self.execution_date + timedelta(1)).strftime('%Y-%m-%d')
 
-        prev_execution_date = task.dag.previous_schedule(self.execution_date)
-        prev_ds = prev_execution_date.isoformat()[:10] if prev_execution_date else None
-        next_execution_date = task.dag.following_schedule(self.execution_date)
-        next_ds = next_execution_date.isoformat()[:10] if next_execution_date else None
-        month_first_date = self.execution_date.replace(day=1)
-        month_first_ds = month_first_date.isoformat()[:10]
-        month_last_date = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
-        month_last_ds = month_last_date.isoformat()[:10]
+        # For manually triggered dagruns that aren't run on a schedule, next/previous
+        # schedule dates don't make sense, and should be set to execution date for
+        # consistency with how execution_date is set for manually triggered tasks, i.e.
+        # triggered_date == execution_date.
+        if dag_run and dag_run.external_trigger:
+            prev_execution_date = self.execution_date
+            next_execution_date = self.execution_date
+        else:
+            prev_execution_date = task.dag.previous_schedule(self.execution_date)
+            next_execution_date = task.dag.following_schedule(self.execution_date)
 
         next_ds = None
         next_ds_nodash = None
@@ -1913,28 +1932,17 @@ class TaskInstance(Base, LoggingMixin):
         tomorrow_ds_nodash = tomorrow_ds.replace('-', '')
         prev_ds_nodash = prev_ds.replace('-', '') if prev_ds else None
         next_ds_nodash = next_ds.replace('-', '') if next_ds else None
+
+        month_first_date = self.execution_date.replace(day=1)
+        month_first_ds = month_first_date.isoformat()[:10]
+        month_last_date = self.execution_date.replace(day=calendar.monthrange(self.execution_date.year, self.execution_date.month)[1])
+        month_last_ds = month_last_date.isoformat()[:10]
+
         month_first_ds_nodash = month_first_ds.replace('-', '')
         month_last_ds_nodash = month_last_ds.replace('-', '')
 
         ti_key_str = "{task.dag_id}__{task.task_id}__{ds_nodash}"
         ti_key_str = ti_key_str.format(**locals())
-
-        params = {}
-        run_id = ''
-        dag_run = None
-        if hasattr(task, 'dag'):
-            if task.dag.params:
-                params.update(task.dag.params)
-            dag_run = (
-                session.query(DagRun)
-                .filter_by(
-                    dag_id=task.dag.dag_id,
-                    execution_date=self.execution_date)
-                .first()
-            )
-            run_id = dag_run.run_id if dag_run else None
-            session.expunge_all()
-            session.commit()
 
         if task.params:
             params.update(task.params)
