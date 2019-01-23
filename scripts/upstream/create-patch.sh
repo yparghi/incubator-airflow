@@ -1,2 +1,2 @@
 mkdir -p ./patches
-git diff ${UPSTREAM_BRANCH}..${ORIGIN_BRANCH} --binary > ./patches/${UPSTREAM_BRANCH}-${ORIGIN_BRANCH}.patch
+git format-patch ${UPSTREAM_BRANCH}..${ORIGIN_BRANCH} --binary --stdout > ./patches/${UPSTREAM_BRANCH}-${ORIGIN_BRANCH}.patch

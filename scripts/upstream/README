@@ -1,0 +1,15 @@
+# Start on current branch:
+gco ind_1.10_stable
+
+# Create a new branch reflecting the new version
+gco -b ind_1.10.2
+
+# Create a patch between the existing version and the new version
+UPSTREAM_BRANCH=ind_1.10_stable ORIGIN_BRANCH=1.10.2 scripts/upstream/create-patch.sh
+
+# Apply that patch
+UPSTREAM_BRANCH=ind_1.10_stable ORIGIN_BRANCH=1.10.2 scripts/upstream/apply-patch.sh
+
+# If there are conflicts, resolve them in the code and...
+git add {file in conflict}
+git am --continue
