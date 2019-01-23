@@ -40,7 +40,7 @@ TABLE_NAME = 'task_reschedule'
 INDEX_NAME = 'idx_' + TABLE_NAME + '_dag_task_date'
 
 def mysql_timestamp():
-    return mysql.TIMESTAMP(fsp=6)
+    return mysql.DATETIME()
 
 def sa_timestamp():
     return sa.TIMESTAMP(timezone=True)
@@ -66,9 +66,9 @@ def upgrade():
         sa.Column('duration', sa.Integer(), nullable=False),
         sa.Column('reschedule_date', timestamp(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
-        sa.ForeignKeyConstraint(['task_id', 'dag_id', 'execution_date'],
-                                ['task_instance.task_id', 'task_instance.dag_id','task_instance.execution_date'],
-                                name='task_reschedule_dag_task_date_fkey')
+        # sa.ForeignKeyConstraint(['task_id', 'dag_id', 'execution_date'],
+        #                         ['task_instance.task_id', 'task_instance.dag_id','task_instance.execution_date'],
+        #                         name='task_reschedule_dag_task_date_fkey')
     )
     op.create_index(
         INDEX_NAME,
