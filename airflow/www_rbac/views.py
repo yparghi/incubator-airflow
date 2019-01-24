@@ -426,8 +426,12 @@ class Airflow(AirflowBaseView):
         dag_id = request.args.get('dag_id')
         dag = dagbag.get_dag(dag_id)
         title = dag_id
+        fileloc = dag.default_args.get('yaml_fileloc', None)
+        if not fileloc:
+            fileloc = dag.fileloc
+            
         try:
-            with wwwutils.open_maybe_zipped(dag.fileloc, 'r') as f:
+            with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
                 code = f.read()
             html_code = highlight(
                 code, lexers.PythonLexer(), HtmlFormatter(linenos=True))
