@@ -693,8 +693,15 @@ class Airflow(AirflowViewMixin, BaseView):
         all_errors = ""
         try:
             dag_id = request.args.get('dag_id')
-            dag_orm = models.DagModel.get_dagmodel(dag_id, session=session)
-            code = DagCode.get_code_by_fileloc(dag_orm.fileloc)
+            dm = models.DagModel
+            dag = session.query(dm).filter(dm.dag_id == dag_id).first()
+            fileloc = dag.default_args.get('yaml_fileloc', None)
+            if not fileloc:
+                fileloc = dag.fileloc
+
+        try:
+            with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
+                code = f.read()
             html_code = highlight(
                 code, lexers.PythonLexer(), HtmlFormatter(linenos=True))
 
@@ -1653,6 +1660,9 @@ class Airflow(AirflowViewMixin, BaseView):
             'instances': [dag_runs.get(d) or {'execution_date': d.isoformat()} for d in dates],
         }
 
+        # minimize whitespace as this can be huge for bigger dags
+        from utils.json import json_ser
+        data = json.dumps(data, default=json_ser, separators=(',', ':'), indent=None)
         session.commit()
 
         form = DateTimeWithNumRunsForm(data={'base_date': max_date,

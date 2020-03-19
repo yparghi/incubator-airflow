@@ -33,6 +33,7 @@ depends_on = None
 
 
 def upgrade():
+    pass
     conn = op.get_bind()
     if conn.dialect.name == 'mysql':
         conn.execute("SET time_zone = '+00:00'")
@@ -42,6 +43,8 @@ def upgrade():
 
 
 def downgrade():
+    pass
+    
     conn = op.get_bind()
     if conn.dialect.name == 'mysql':
         conn.execute("SET time_zone = '+00:00'")

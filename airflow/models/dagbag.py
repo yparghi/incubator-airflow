@@ -86,6 +86,7 @@ class DagBag(BaseDagBag, LoggingMixin):
             dag_folder=None,
             executor=None,
             include_examples=conf.getboolean('core', 'LOAD_EXAMPLES'),
+            include_dag_ids=None,
             safe_mode=conf.getboolean('core', 'DAG_DISCOVERY_SAFE_MODE'),
             store_serialized_dags=False,
     ):
@@ -106,6 +107,7 @@ class DagBag(BaseDagBag, LoggingMixin):
         self.collect_dags(
             dag_folder=dag_folder,
             include_examples=include_examples,
+            include_dag_ids=include_dag_ids,
             safe_mode=safe_mode)
 
     def size(self):
@@ -178,7 +180,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                 del self.dags[dag_id]
         return self.dags.get(dag_id)
 
-    def process_file(self, filepath, only_if_updated=True, safe_mode=True):
+    def process_file(self, filepath, only_if_updated=True, safe_mode=True, include_dag_ids=None):
         """
         Given a path to a python module or zip file, this method imports
         the module and look for dag objects within it.
@@ -276,6 +278,30 @@ class DagBag(BaseDagBag, LoggingMixin):
                         self.file_last_changed[filepath] = file_last_changed_on_disk
 
         for m in mods:
+
+            # CF: We publish a dictionary called integrations to global scope and then use the data there to invoke
+            #     a build_dag fn that's also on the global scope
+            integrations = m.__dict__.get('integrations', None)
+            if integrations:
+                dirs_with_dags = set()
+                for dag_id in list(integrations.keys()):
+                    self.log.info('Found integration %s', dag_id)
+                    if not include_dag_ids or any(item.startswith(dag_id) for item in include_dag_ids):
+                        root_dir = integrations[dag_id]
+                        dirs_with_dags.add(root_dir)
+                collect_dags_fn = m.__dict__.get('collect_dags', None)
+                built_dags = {}
+                if collect_dags_fn:
+                    for root_dir in dirs_with_dags:
+                        self.log.info('Collecting dags in %s', root_dir)
+                        built_dags.update(collect_dags_fn(root_dir))
+                self.log.info('Built dags %s', list(built_dags.keys()))
+                m.__dict__.update(built_dags)
+                for dag in built_dags.values():
+                    task_start_dates = [t.start_date for t in dag.tasks]
+                    task_start = min(task_start_dates)
+                    self.log.info('%s: Task starts: %s, DAG starts: %s', dag.dag_id, task_start, dag.start_date)
+
             for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):
                     if not dag.full_filepath:
@@ -283,12 +309,13 @@ class DagBag(BaseDagBag, LoggingMixin):
                         if dag.fileloc != filepath and not is_zipfile:
                             dag.fileloc = filepath
                     try:
-                        dag.is_subdag = False
-                        self.bag_dag(dag, parent_dag=dag, root_dag=dag)
-                        if isinstance(dag._schedule_interval, six.string_types):
-                            croniter(dag._schedule_interval)
-                        found_dags.append(dag)
-                        found_dags += dag.subdags
+                        if not include_dag_ids or any(item.startswith(dag.dag_id) for item in include_dag_ids):
+                            dag.is_subdag = False
+                            self.bag_dag(dag, parent_dag=dag, root_dag=dag)
+                            if isinstance(dag._schedule_interval, six.string_types):
+                                croniter(dag._schedule_interval)
+                            found_dags.append(dag)
+                            found_dags += dag.subdags
                     except (CroniterBadCronError,
                             CroniterBadDateError,
                             CroniterNotAlphaError) as cron_e:
@@ -377,6 +404,7 @@ class DagBag(BaseDagBag, LoggingMixin):
             dag_folder=None,
             only_if_updated=True,
             include_examples=conf.getboolean('core', 'LOAD_EXAMPLES'),
+            include_dag_ids=None,
             safe_mode=conf.getboolean('core', 'DAG_DISCOVERY_SAFE_MODE')):
         """
         Given a file path or a folder, this method looks for python modules,
@@ -410,6 +438,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                 ts = timezone.utcnow()
                 found_dags = self.process_file(
                     filepath, only_if_updated=only_if_updated,
+                    include_dag_ids=include_dag_ids,
                     safe_mode=safe_mode)
                 dag_ids = [dag.dag_id for dag in found_dags]
                 dag_id_names = str(dag_ids)
