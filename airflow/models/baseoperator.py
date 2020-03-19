@@ -714,8 +714,19 @@ class BaseOperator(LoggingMixin):
         for attr_name in template_fields:
             content = getattr(parent, attr_name)
             if content:
-                rendered_content = self.render_template(content, context, jinja_env, seen_oids)
-                setattr(parent, attr_name, rendered_content)
+                last_content = content
+                done_rendering = False
+                iterations = 0
+                while not done_rendering:
+                    rendered_content = self.render_template(last_content, context, jinja_env, seen_oids)
+                    if iterations > 5:
+                        logging.info('Stuck in loop!!!!')
+                        break
+                    if last_content == rendered_content:
+                        done_rendering = True
+                    last_content = rendered_content
+                    iterations += 1
+                setattr(parent, attr_name, last_content)
 
     def render_template(self, content, context, jinja_env=None, seen_oids=None):
         # type: (Any, Dict, Optional[jinja2.Environment], Optional[Set]) -> Any

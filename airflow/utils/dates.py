@@ -78,13 +78,14 @@ def date_range(start_date, end_date=None, num=None, delta=None):
     tz = start_date.tzinfo
     if isinstance(delta, six.string_types):
         delta_iscron = True
-        start_date = timezone.make_naive(start_date, tz)
+        if not timezone.is_naive(start_date):
+            start_date = timezone.make_naive(start_date, tz)
         cron = croniter(delta, start_date)
     elif isinstance(delta, timedelta):
         delta = abs(delta)
     dates = []
     if end_date:
-        if timezone.is_naive(start_date):
+        if timezone.is_naive(start_date) and not timezone.is_naive(end_date):
             end_date = timezone.make_naive(end_date, tz)
         while start_date <= end_date:
             if timezone.is_naive(start_date):

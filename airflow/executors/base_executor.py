@@ -87,6 +87,7 @@ class BaseExecutor(LoggingMixin):
             pool=pool,
             pickle_id=pickle_id,
             cfg_path=cfg_path)
+
         self.queue_command(
             airflow.utils.dag_processing.SimpleTaskInstance(task_instance),
             command,

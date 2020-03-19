@@ -46,7 +46,7 @@ def upgrade():
         op.create_table(
             'connection',
             sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('conn_id', sa.String(length=250), nullable=True),
+            sa.Column('conn_id', sa.String(length=191), nullable=True),
             sa.Column('conn_type', sa.String(length=500), nullable=True),
             sa.Column('host', sa.String(length=500), nullable=True),
             sa.Column('schema', sa.String(length=500), nullable=True),
@@ -59,7 +59,7 @@ def upgrade():
     if 'dag' not in tables:
         op.create_table(
             'dag',
-            sa.Column('dag_id', sa.String(length=250), nullable=False),
+            sa.Column('dag_id', sa.String(length=191), nullable=False),
             sa.Column('is_paused', sa.Boolean(), nullable=True),
             sa.Column('is_subdag', sa.Boolean(), nullable=True),
             sa.Column('is_active', sa.Boolean(), nullable=True),
@@ -94,7 +94,7 @@ def upgrade():
         op.create_table(
             'job',
             sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('dag_id', sa.String(length=250), nullable=True),
+            sa.Column('dag_id', sa.String(length=191), nullable=True),
             sa.Column('state', sa.String(length=20), nullable=True),
             sa.Column('job_type', sa.String(length=30), nullable=True),
             sa.Column('start_date', sa.DateTime(), nullable=True),
@@ -123,8 +123,8 @@ def upgrade():
             'log',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('dttm', sa.DateTime(), nullable=True),
-            sa.Column('dag_id', sa.String(length=250), nullable=True),
-            sa.Column('task_id', sa.String(length=250), nullable=True),
+            sa.Column('dag_id', sa.String(length=191), nullable=True),
+            sa.Column('task_id', sa.String(length=191), nullable=True),
             sa.Column('event', sa.String(length=30), nullable=True),
             sa.Column('execution_date', sa.DateTime(), nullable=True),
             sa.Column('owner', sa.String(length=500), nullable=True),
@@ -133,8 +133,8 @@ def upgrade():
     if 'sla_miss' not in tables:
         op.create_table(
             'sla_miss',
-            sa.Column('task_id', sa.String(length=250), nullable=False),
-            sa.Column('dag_id', sa.String(length=250), nullable=False),
+            sa.Column('task_id', sa.String(length=191), nullable=False),
+            sa.Column('dag_id', sa.String(length=191), nullable=False),
             sa.Column('execution_date', sa.DateTime(), nullable=False),
             sa.Column('email_sent', sa.Boolean(), nullable=True),
             sa.Column('timestamp', sa.DateTime(), nullable=True),
@@ -154,8 +154,8 @@ def upgrade():
     if 'task_instance' not in tables:
         op.create_table(
             'task_instance',
-            sa.Column('task_id', sa.String(length=250), nullable=False),
-            sa.Column('dag_id', sa.String(length=250), nullable=False),
+            sa.Column('task_id', sa.String(length=191), nullable=False),
+            sa.Column('dag_id', sa.String(length=191), nullable=False),
             sa.Column('execution_date', sa.DateTime(), nullable=False),
             sa.Column('start_date', sa.DateTime(), nullable=True),
             sa.Column('end_date', sa.DateTime(), nullable=True),
@@ -193,7 +193,7 @@ def upgrade():
         op.create_table(
             'user',
             sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('username', sa.String(length=250), nullable=True),
+            sa.Column('username', sa.String(length=191), nullable=True),
             sa.Column('email', sa.String(length=500), nullable=True),
             sa.PrimaryKeyConstraint('id'),
             sa.UniqueConstraint('username')
@@ -202,7 +202,7 @@ def upgrade():
         op.create_table(
             'variable',
             sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('key', sa.String(length=250), nullable=True),
+            sa.Column('key', sa.String(length=191), nullable=True),
             sa.Column('val', sa.Text(), nullable=True),
             sa.PrimaryKeyConstraint('id'),
             sa.UniqueConstraint('key')
@@ -212,7 +212,7 @@ def upgrade():
             'chart',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('label', sa.String(length=200), nullable=True),
-            sa.Column('conn_id', sa.String(length=250), nullable=False),
+            sa.Column('conn_id', sa.String(length=191), nullable=False),
             sa.Column('user_id', sa.Integer(), nullable=True),
             sa.Column('chart_type', sa.String(length=100), nullable=True),
             sa.Column('sql_layout', sa.String(length=50), nullable=True),
@@ -255,8 +255,8 @@ def upgrade():
                 default=func.now(),
                 nullable=False),
             sa.Column('execution_date', sa.DateTime(), nullable=False),
-            sa.Column('task_id', sa.String(length=250), nullable=False),
-            sa.Column('dag_id', sa.String(length=250), nullable=False),
+            sa.Column('task_id', sa.String(length=191), nullable=False),
+            sa.Column('dag_id', sa.String(length=191), nullable=False),
             sa.PrimaryKeyConstraint('id')
         )
 

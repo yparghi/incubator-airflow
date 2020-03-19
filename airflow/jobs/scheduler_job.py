@@ -680,13 +680,18 @@ class SchedulerJob(BaseJob):
             next_run_date = None
             if not last_scheduled_run:
                 # First run
+                self.log.info("Scheduling first run for %s", dag.dag_id)
                 task_start_dates = [t.start_date for t in dag.tasks]
                 if task_start_dates:
-                    next_run_date = dag.normalize_schedule(min(task_start_dates))
+                    task_start = min(task_start_dates)
+                    self.log.info('Task starts for %s: %s', dag.dag_id, task_start)
+                    next_run_date = dag.normalize_schedule(task_start)
                     self.log.debug(
                         "Next run date based on tasks %s",
                         next_run_date
                     )
+                    if timezone.is_naive(next_run_date):
+                        next_run_date = timezone.make_aware(next_run_date)
             else:
                 next_run_date = dag.following_schedule(last_scheduled_run)
 
@@ -695,6 +700,11 @@ class SchedulerJob(BaseJob):
             if last_run and next_run_date:
                 while next_run_date <= last_run.execution_date:
                     next_run_date = dag.following_schedule(next_run_date)
+
+            self.log.debug(
+                "Next run date after backfill lookup: %s. DAG Start: %s",
+                next_run_date, dag.start_date
+            )
 
             # don't ever schedule prior to the dag's start_date
             if dag.start_date:
@@ -710,6 +720,10 @@ class SchedulerJob(BaseJob):
 
             # don't ever schedule in the future or if next_run_date is None
             if not next_run_date or next_run_date > timezone.utcnow():
+                self.log.debug(
+                    "Next run date in the future! %s",
+                    next_run_date
+                )
                 return
 
             # this structure is necessary to avoid a TypeError from concatenating
@@ -719,8 +733,11 @@ class SchedulerJob(BaseJob):
             elif next_run_date:
                 period_end = dag.following_schedule(next_run_date)
 
+            self.log.debug("DAG %s period end %s", dag.dag_id, period_end)
+
             # Don't schedule a dag beyond its end_date (as specified by the dag param)
             if next_run_date and dag.end_date and next_run_date > dag.end_date:
+                self.log.debug("Don't schedule beyond dag end date! %s", dag.end_date)
                 return
 
             # Don't schedule a dag beyond its end_date (as specified by the task params)
@@ -730,6 +747,7 @@ class SchedulerJob(BaseJob):
             if task_end_dates:
                 min_task_end_date = min(task_end_dates)
             if next_run_date and min_task_end_date and next_run_date > min_task_end_date:
+                self.log.debug("Don't schedule beyond min task end date! %s", min_task_end_date)
                 return
 
             if next_run_date and period_end and period_end <= timezone.utcnow():
@@ -1557,7 +1575,7 @@ class SchedulerJob(BaseJob):
         :return: a list of SimpleDags made from the Dags found in the file
         :rtype: list[airflow.utils.dag_processing.SimpleDagBag]
         """
-        self.log.info("Processing file %s for tasks to queue", file_path)
+        self.log.debug("Processing file %s for tasks to queue", file_path)
         # As DAGs are parsed from this file, they will be converted into SimpleDags
         simple_dags = []
 
