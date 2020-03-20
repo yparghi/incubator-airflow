@@ -45,6 +45,7 @@ def upgrade():
         #     ['task_id', 'dag_id', 'execution_date'],
         #     ondelete='CASCADE'
         # )
+    pass
 
 
 def downgrade():
