@@ -57,19 +57,19 @@ def upgrade():
 
     if conn.dialect.name == "mysql":
         conn.execute("SET time_zone = '+00:00'")
-        cur = conn.execute("SELECT @@explicit_defaults_for_timestamp")
-        res = cur.fetchall()
-        if res[0][0] == 0:
-            raise Exception(
-                "Global variable explicit_defaults_for_timestamp needs to be on (1) for mysql"
-            )
-
-        op.alter_column(  # pylint: disable=no-member
-            table_name="serialized_dag",
-            column_name="last_updated",
-            type_=mysql.TIMESTAMP(fsp=6),
-            nullable=False,
-        )
+        # cur = conn.execute("SELECT @@explicit_defaults_for_timestamp")
+        # res = cur.fetchall()
+        # if res[0][0] == 0:
+        #     raise Exception(
+        #         "Global variable explicit_defaults_for_timestamp needs to be on (1) for mysql"
+        #     )
+        #
+        # op.alter_column(  # pylint: disable=no-member
+        #     table_name="serialized_dag",
+        #     column_name="last_updated",
+        #     type_=mysql.TIMESTAMP(fsp=6),
+        #     nullable=False,
+        # )
     else:
         # sqlite and mssql datetime are fine as is.  Therefore, not converting
         if conn.dialect.name in ("sqlite", "mssql"):
