@@ -521,7 +521,9 @@ class Airflow(AirflowBaseView):
             dm = models.DagModel
             dag_id = request.args.get('dag_id')
             dag = session.query(dm).filter(dm.dag_id == dag_id).first()
-            fileloc = dag.default_args.get('yaml_fileloc', None)
+
+            actual_dag = dagbag.get_dag(dag_id)
+            fileloc = actual_dag.default_args.get('yaml_fileloc', None) if actual_dag is not None else None
             if not fileloc:
                 fileloc = dag.fileloc
 
