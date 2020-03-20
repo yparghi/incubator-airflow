@@ -64,8 +64,8 @@ def upgrade():
     op.create_table(
         TABLE_NAME,
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('task_id', sa.String(length=250), nullable=False),
-        sa.Column('dag_id', sa.String(length=250), nullable=False),
+        sa.Column('task_id', sa.String(length=191), nullable=False),
+        sa.Column('dag_id', sa.String(length=191), nullable=False),
         # use explicit server_default=None otherwise mysql implies defaults for first timestamp column
         sa.Column('execution_date', timestamp(), nullable=False, server_default=None),
         sa.Column('try_number', sa.Integer(), nullable=False),
