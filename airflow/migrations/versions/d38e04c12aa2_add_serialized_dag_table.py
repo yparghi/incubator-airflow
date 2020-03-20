@@ -46,7 +46,7 @@ def upgrade():
             json_type = sa.Text
 
     op.create_table('serialized_dag',  # pylint: disable=no-member
-                    sa.Column('dag_id', sa.String(length=250), nullable=False),
+                    sa.Column('dag_id', sa.String(length=191), nullable=False),
                     sa.Column('fileloc', sa.String(length=2000), nullable=False),
                     sa.Column('fileloc_hash', sa.Integer(), nullable=False),
                     sa.Column('data', json_type(), nullable=False),

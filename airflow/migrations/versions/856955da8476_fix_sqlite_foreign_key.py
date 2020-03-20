@@ -46,7 +46,7 @@ def upgrade():
                                sa.MetaData(),
                                sa.Column('id', sa.Integer(), nullable=False),
                                sa.Column('label', sa.String(length=200), nullable=True),
-                               sa.Column('conn_id', sa.String(length=250), nullable=False),
+                               sa.Column('conn_id', sa.String(length=191), nullable=False),
                                sa.Column('user_id', sa.Integer(), nullable=True),
                                sa.Column('chart_type', sa.String(length=100), nullable=True),
                                sa.Column('sql_layout', sa.String(length=50), nullable=True),

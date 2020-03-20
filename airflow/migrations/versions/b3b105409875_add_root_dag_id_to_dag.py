@@ -34,7 +34,7 @@ depends_on = None
 
 def upgrade():
     """Apply add root_dag_id to DAG"""
-    op.add_column('dag', sa.Column('root_dag_id', sa.String(length=250), nullable=True))
+    op.add_column('dag', sa.Column('root_dag_id', sa.String(length=191), nullable=True))
     op.create_index('idx_root_dag_id', 'dag', ['root_dag_id'], unique=False)
 
 
