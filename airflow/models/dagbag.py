@@ -299,15 +299,13 @@ class DagBag(BaseDagBag, LoggingMixin):
                 collect_dags_fn = m.__dict__.get('collect_dags', None)
                 built_dags = {}
                 if collect_dags_fn:
+                    import time
+                    start_time = time.time()
                     for root_dir in dirs_with_dags:
-                        self.log.info('Collecting dags in %s', root_dir)
                         built_dags.update(collect_dags_fn(root_dir))
-                self.log.info('Built dags %s', list(built_dags.keys()))
+                    end_time = time.time()
+                    self.log.info('Collected DAGs in %.3f seconds', end_time - start_time)
                 m.__dict__.update(built_dags)
-                for dag in built_dags.values():
-                    task_start_dates = [t.start_date for t in dag.tasks]
-                    task_start = min(task_start_dates)
-                    self.log.info('%s: Task starts: %s, DAG starts: %s', dag.dag_id, task_start, dag.start_date)
 
             for dag in list(m.__dict__.values()):
                 if isinstance(dag, DAG):
