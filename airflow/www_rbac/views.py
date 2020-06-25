@@ -67,6 +67,7 @@ from airflow.ti_deps.dep_context import RUNNING_DEPS, SCHEDULER_QUEUED_DEPS, Dep
 from airflow.utils import timezone
 from airflow.utils.dates import infer_time_unit, scale_time_units
 from airflow.utils.db import provide_session
+from airflow.utils.file import open_maybe_zipped
 from airflow.utils.helpers import alchemy_to_dict, render_log_filename
 from airflow.utils.state import State
 from airflow._vendor import nvd3
@@ -525,7 +526,7 @@ class Airflow(AirflowBaseView):
             actual_dag = dagbag.get_dag(dag_id)
             fileloc = actual_dag.default_args.get('yaml_fileloc', None) if actual_dag is not None else None
             if fileloc:
-                with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
+                with open_maybe_zipped(fileloc, 'r') as f:
                     code = f.read()
 
             html_code = highlight(
