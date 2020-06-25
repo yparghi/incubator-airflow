@@ -693,15 +693,15 @@ class Airflow(AirflowViewMixin, BaseView):
         all_errors = ""
         try:
             dag_id = request.args.get('dag_id')
-            dm = models.DagModel
-            dag = session.query(dm).filter(dm.dag_id == dag_id).first()
-            fileloc = dag.default_args.get('yaml_fileloc', None)
-            if not fileloc:
-                fileloc = dag.fileloc
+            dag_orm = models.DagModel.get_dagmodel(dag_id, session=session)
+            code = DagCode.get_code_by_fileloc(dag_orm.fileloc)
 
-        try:
-            with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
-                code = f.read()
+            actual_dag = dagbag.get_dag(dag_id)
+            fileloc = actual_dag.default_args.get('yaml_fileloc', None) if actual_dag is not None else None
+            if fileloc:
+                with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
+                    code = f.read()
+
             html_code = highlight(
                 code, lexers.PythonLexer(), HtmlFormatter(linenos=True))
 

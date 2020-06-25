@@ -518,17 +518,16 @@ class Airflow(AirflowBaseView):
         all_errors = ""
 
         try:
-            dm = models.DagModel
             dag_id = request.args.get('dag_id')
-            dag = session.query(dm).filter(dm.dag_id == dag_id).first()
+            dag_orm = DagModel.get_dagmodel(dag_id, session=session)
+            code = DagCode.get_code_by_fileloc(dag_orm.fileloc)
 
             actual_dag = dagbag.get_dag(dag_id)
             fileloc = actual_dag.default_args.get('yaml_fileloc', None) if actual_dag is not None else None
-            if not fileloc:
-                fileloc = dag.fileloc
+            if fileloc:
+                with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
+                    code = f.read()
 
-            with wwwutils.open_maybe_zipped(fileloc, 'r') as f:
-                code = f.read()
             html_code = highlight(
                 code, lexers.PythonLexer(), HtmlFormatter(linenos=True))
 
