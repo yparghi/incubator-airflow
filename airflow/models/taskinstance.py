@@ -175,11 +175,12 @@ class TaskInstance(Base, LoggingMixin):
         Index('ti_job_id', job_id),
     )
 
-    def __init__(self, task, execution_date, state=None):
+    def __init__(self, task, execution_date, state=None, assume_main_thread=True):
         self.dag_id = task.dag_id
         self.task_id = task.task_id
         self.task = task
         self.refresh_from_task(task)
+        self.assume_main_thread = assume_main_thread
         self._log = logging.getLogger("airflow.task")
 
         # make sure we have a localized execution_date stored in UTC
@@ -950,11 +951,12 @@ class TaskInstance(Base, LoggingMixin):
 
                 self.task = task_copy
 
-                def signal_handler(signum, frame):
-                    self.log.error("Received SIGTERM. Terminating subprocesses.")
-                    task_copy.on_kill()
-                    raise AirflowException("Task received SIGTERM signal")
-                signal.signal(signal.SIGTERM, signal_handler)
+                if self.assume_main_thread:
+                    def signal_handler(signum, frame):
+                        self.log.error("Received SIGTERM. Terminating subprocesses.")
+                        task_copy.on_kill()
+                        raise AirflowException("Task received SIGTERM signal")
+                    signal.signal(signal.SIGTERM, signal_handler)
 
                 # Don't clear Xcom until the task is certain to execute
                 self.clear_xcom_data()
